@@ -1,0 +1,75 @@
+package com.example.spendwise.navigation
+
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
+import com.example.spendwise.ui.add.AddTransactionScreen
+import com.example.spendwise.ui.budget.BudgetScreen
+import com.example.spendwise.ui.history.HistoryScreen
+import com.example.spendwise.ui.home.HomeScreen
+import com.example.spendwise.ui.stats.StatsScreen
+
+sealed class Screen(val route: String) {
+    object Home           : Screen("home")
+    object AddTransaction : Screen("add_transaction")
+    object History        : Screen("history")
+    object Stats          : Screen("stats")
+    object Budget         : Screen("budget")
+
+    object EditTransaction : Screen("edit_transaction/{transactionId}") {
+        fun createRoute(id: Int) = "edit_transaction/$id"
+        const val ARG_ID = "transactionId"
+    }
+}
+
+@Composable
+fun SpendWiseNavHost(
+    navController: NavHostController,
+    modifier: Modifier = Modifier
+) {
+    NavHost(
+        navController    = navController,
+        startDestination = Screen.Home.route,
+        modifier         = modifier
+    ) {
+        composable(Screen.Home.route) {
+            HomeScreen(onNavigateToAdd = {
+                navController.navigate(Screen.AddTransaction.route)
+            })
+        }
+
+        composable(Screen.AddTransaction.route) {
+            AddTransactionScreen(
+                transactionId  = -1,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route     = Screen.EditTransaction.route,
+            arguments = listOf(navArgument(Screen.EditTransaction.ARG_ID) {
+                type         = NavType.IntType
+                defaultValue = -1
+            })
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getInt(Screen.EditTransaction.ARG_ID) ?: -1
+            AddTransactionScreen(
+                transactionId  = id,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.History.route) {
+            HistoryScreen(onNavigateToEdit = { id ->
+                navController.navigate(Screen.EditTransaction.createRoute(id))
+            })
+        }
+
+        composable(Screen.Stats.route)  { StatsScreen() }
+        composable(Screen.Budget.route) { BudgetScreen() }
+    }
+}
