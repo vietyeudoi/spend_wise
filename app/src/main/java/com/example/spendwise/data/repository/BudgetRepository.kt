@@ -21,18 +21,17 @@ class BudgetRepository(application: Application) {
     fun getByMonth(month: Int, year: Int): LiveData<List<Budget>> =
         dao.getByMonth(month, year)
 
-    fun insert(budget: Budget) {
-        executor.execute { dao.insert(budget) }
+    suspend fun insert(budget: Budget) {
+        dao.insert(budget)
     }
 
-    fun update(budget: Budget) {
-        executor.execute { dao.update(budget) }
+    suspend fun update(budget: Budget) {
+        dao.update(budget)
     }
 
-    fun delete(budget: Budget) {
-        executor.execute { dao.delete(budget) }
+    suspend fun delete(budget: Budget) {
+        dao.delete(budget)
     }
-
     // Dùng để kiểm tra ngân sách trước khi thêm/sửa (chạy ngoài main thread)
     fun getByCategoryAndMonth(categoryId: Int, month: Int, year: Int): Budget? =
         dao.getByCategoryAndMonth(categoryId, month, year)

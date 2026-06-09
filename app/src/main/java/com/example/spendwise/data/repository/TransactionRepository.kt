@@ -51,6 +51,14 @@ class TransactionRepository(application: Application) {
         executor.execute { dao.delete(transaction) }
     }
 
-    // Dùng khi cần lấy 1 bản ghi để sửa (chạy từ background thread bên ngoài)
-    fun getById(id: Int): Transaction? = dao.getById(id)
+    // ĐÃ ĐỒNG BỘ: Khớp hoàn toàn kiểu trả về Transaction? với DAO mới sửa đổi
+    fun getById(id: Int): LiveData<Transaction?> {
+        return dao.getById(id)
+    }
+
+    fun getByDate(date: String): LiveData<List<Transaction>> =
+        dao.getByDate(date)
+
+    fun getByYear(year: String): LiveData<List<Transaction>> =
+        dao.getByYear(year)
 }
