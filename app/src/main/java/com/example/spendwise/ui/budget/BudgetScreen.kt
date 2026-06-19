@@ -1,126 +1,305 @@
 package com.example.spendwise.ui.budget
 
+
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-
-// ✅ IMPORT QUAN TRỌNG NHẤT (BẮT BUỘC)
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.livedata.observeAsState
-
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.spendwise.data.entity.Budget
+import com.example.spendwise.viewmodel.BudgetViewModel
 import com.example.spendwise.viewmodel.TransactionViewModel
-import com.example.spendwise.ui.home.formatMoney
 
-@OptIn(ExperimentalMaterial3Api::class)
+
+
 @Composable
 fun BudgetScreen(
-    vm: TransactionViewModel = viewModel()
-) {
+    budgetVm:BudgetViewModel=viewModel(),
+    txVm:TransactionViewModel=viewModel()
+){
 
-    // ===== DATA REAL =====
-    val budgetAmount = vm.budget
-    val expense by vm.getExpense().observeAsState(0.0)
 
-    val spentAmount = expense ?: 0.0
-    val remaining = budgetAmount - spentAmount
 
-    val progress =
-        if (budgetAmount <= 0) 0f
-        else (spentAmount / budgetAmount).toFloat()
+    val budgets by
+    budgetVm.budgets.observeAsState(
+        emptyList()
+    )
 
-    val isOverBudget = spentAmount > budgetAmount
 
-    // ===== STATE DIALOG =====
-    var showDialog by remember { mutableStateOf(false) }
-    var temp by remember { mutableStateOf("") }
+    val categories by
+    txVm.allCategories.observeAsState(
+        emptyList()
+    )
 
-    if (showDialog) {
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = { Text("Nhập ngân sách") },
-            text = {
-                OutlinedTextField(
-                    value = temp,
-                    onValueChange = { temp = it },
-                    singleLine = true
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    vm.setBudget(temp.toDoubleOrNull() ?: 0.0)
-                    showDialog = false
-                }) {
-                    Text("Lưu")
-                }
-            }
-        )
+
+
+    var showDialog by remember{
+        mutableStateOf(false)
     }
 
-    // ===== UI =====
+
+    var amount by remember{
+        mutableStateOf("")
+    }
+
+
+    var selectedCategory by remember{
+        mutableStateOf<Int?>(null)
+    }
+
+
+
+
+
     Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Ngân sách") })
+
+        floatingActionButton = {
+
+            FloatingActionButton(
+                onClick={
+                    showDialog=true
+                }
+            ){
+
+                Icon(
+                    Icons.Default.Add,
+                    null
+                )
+
+            }
+
         }
-    ) { padding ->
+
+    ){padding->
+
+
 
         Column(
-            modifier = Modifier
-                .fillMaxSize()
+            Modifier
                 .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+                .padding(16.dp)
+        ){
 
-            // ===== CARD =====
-            Card {
-                Column(Modifier.padding(16.dp)) {
 
-                    Text("Ngân sách tháng")
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement =
+                    Arrangement.SpaceBetween
+            ){
 
-                    Text(
-                        formatMoney(budgetAmount),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp
-                    )
-
-                    Spacer(Modifier.height(12.dp))
-
-                    LinearProgressIndicator(
-                        progress = { progress.coerceAtMost(1f) },
-                        modifier = Modifier.fillMaxWidth(),
-                        color = if (isOverBudget) Color.Red else Color.Blue
-                    )
-
-                    Spacer(Modifier.height(12.dp))
-
-                    Text("Đã chi: ${formatMoney(spentAmount)}")
-                    Text("Còn lại: ${formatMoney(remaining)}")
-
-                    if (isOverBudget) {
-                        Text(
-                            "⚠ Vượt ngân sách",
-                            color = Color.Red,
-                            fontWeight = FontWeight.Bold
-                        )
+                Button(
+                    onClick={
+                        budgetVm.prevMonth()
                     }
+                ){
+                    Text("<")
                 }
+
+
+
+                Text(
+                    "${budgetVm.selectedMonth}/${budgetVm.selectedYear}",
+                    style =
+                        MaterialTheme.typography.titleLarge
+                )
+
+
+
+                Button(
+                    onClick={
+                        budgetVm.nextMonth()
+                    }
+                ){
+                    Text(">")
+                }
+
             }
 
-            // ===== BUTTON =====
-            Button(
-                onClick = {
-                    temp = budgetAmount.toInt().toString()
-                    showDialog = true
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Thiết lập ngân sách")
+
+
+
+
+            LazyColumn{
+
+                items(budgets){budget->
+
+
+                    val name =
+                        categories
+                            .find {
+                                it.id ==
+                                        budget.categoryId
+                            }
+                            ?.name ?: ""
+
+
+
+                    Card(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                    ){
+
+                        Column(
+                            Modifier.padding(16.dp)
+                        ){
+
+                            Text(name)
+
+                            Text(
+                                "Giới hạn: ${budget.limitAmount}"
+                            )
+
+
+                        }
+
+
+                    }
+
+
+                }
+
+
             }
+
+
         }
+
+
+
+        if(showDialog){
+
+
+            AlertDialog(
+
+                onDismissRequest={
+                    showDialog=false
+                },
+
+
+                title={
+                    Text("Thêm ngân sách")
+                },
+
+
+                text={
+
+                    Column{
+
+
+                        categories
+                            .filter{
+                                it.type=="expense"
+                            }
+                            .forEach{
+
+                                Button(
+                                    onClick={
+                                        selectedCategory =
+                                            it.id
+                                    }
+                                ){
+
+                                    Text(it.name)
+
+                                }
+
+
+                            }
+
+
+
+                        OutlinedTextField(
+
+                            value=amount,
+
+                            onValueChange={
+                                amount=it
+                            },
+
+                            label={
+                                Text("Số tiền")
+                            }
+
+                        )
+
+                    }
+
+
+                },
+
+
+                confirmButton={
+
+
+                    TextButton(
+
+                        onClick={
+
+
+                            if(
+                                selectedCategory!=null
+                            ){
+
+
+                                budgetVm.insert(
+
+                                    Budget(
+
+                                        categoryId =
+                                            selectedCategory!!,
+
+
+                                        limitAmount =
+                                            amount
+                                                .toDoubleOrNull()
+                                                ?:0.0,
+
+
+                                        month =
+                                            budgetVm.selectedMonth,
+
+
+                                        year =
+                                            budgetVm.selectedYear
+
+                                    )
+
+                                )
+
+
+                            }
+
+
+                            showDialog=false
+
+
+                        }
+
+                    ){
+
+                        Text("Lưu")
+
+                    }
+
+
+                }
+
+
+            )
+
+
+        }
+
+
+
     }
+
+
+
 }
