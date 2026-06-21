@@ -1,112 +1,400 @@
 package com.example.spendwise.ui.history
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
+import android.app.DatePickerDialog
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
+import androidx.compose.material3.FilterChip
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.example.spendwise.data.entity.Transaction
 import com.example.spendwise.ui.home.formatMoney
 import com.example.spendwise.viewmodel.TransactionViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(
-    onNavigateToEdit: (Int) -> Unit,
+    navController: NavController,
     vm: TransactionViewModel = viewModel()
 ) {
-    val transactions by vm.monthlyTransactions.observeAsState(emptyList())
-    var deleteTarget by remember { mutableStateOf<Transaction?>(null) }
 
-    // ── Dialog xác nhận xóa ───────────────────────────────────────────────────
-    deleteTarget?.let { t ->
-        AlertDialog(
-            onDismissRequest = { deleteTarget = null },
-            title   = { Text("Xóa giao dịch?") },
-            text    = { Text("Bạn có chắc muốn xóa \"${t.title}\" không?") },
-            confirmButton = {
-                TextButton(onClick = { vm.delete(t); deleteTarget = null }) {
-                    Text("Xóa", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { deleteTarget = null }) { Text("Hủy") }
-            }
-        )
+    val context = LocalContext.current
+
+    var mode by remember {
+        mutableStateOf(TransactionViewModel.FilterMode.MONTH)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Text("Lịch sử giao dịch", style = MaterialTheme.typography.titleLarge)
-        Spacer(modifier = Modifier.height(12.dp))
+    LaunchedEffect(mode) {
 
-        if (transactions.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Chưa có giao dịch nào", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(transactions, key = { it.id }) { transaction ->
-                    HistoryItem(
-                        transaction  = transaction,
-                        onClick      = { onNavigateToEdit(transaction.id) },
-                        onLongClick  = { deleteTarget = transaction }
+        vm.changeFilterMode(mode)
+
+        when (mode) {
+            TransactionViewModel.FilterMode.MONTH ->
+                vm.setMonthYear(
+                    vm.selectedMonth,
+                    vm.selectedYear
+                )
+
+            TransactionViewModel.FilterMode.YEAR ->
+                vm.setYear(vm.selectedYear)
+
+            else -> {}
+        }
+    }
+
+    val transactions by vm.getTransactions()
+        .observeAsState(emptyList())
+
+    val income by vm.getIncome()
+        .observeAsState(0.0)
+
+    val expense by vm.getExpense()
+        .observeAsState(0.0)
+
+    val totalIncome = income ?: 0.0
+    val totalExpense = expense ?: 0.0
+
+    val grouped = transactions.groupBy {
+        SimpleDateFormat(
+            "dd/MM/yyyy",
+            Locale.getDefault()
+        ).format(Date(it.date))
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        "Lịch sử giao dịch",
+                        fontWeight = FontWeight.Bold
                     )
+                }
+            )
+        }
+    ) { padding ->
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor =
+                        MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement =
+                        Arrangement.SpaceEvenly
+                ) {
+
+                    SummaryItem(
+                        "Thu",
+                        formatMoney(totalIncome),
+                        Color(0xFF4CAF50)
+                    )
+
+                    SummaryItem(
+                        "Chi",
+                        formatMoney(totalExpense),
+                        Color.Red
+                    )
+
+                    SummaryItem(
+                        "GD",
+                        transactions.size.toString(),
+                        Color.Blue
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp),
+                horizontalArrangement =
+                    Arrangement.spacedBy(8.dp)
+            ) {
+
+                FilterChip(
+                    selected =
+                        mode ==
+                                TransactionViewModel.FilterMode.DAY,
+                    onClick = {
+
+                        mode =
+                            TransactionViewModel.FilterMode.DAY
+
+                        DatePickerDialog(
+                            context,
+                            { _, y, m, d ->
+
+                                vm.setDate(
+                                    "%04d-%02d-%02d".format(
+                                        y,
+                                        m + 1,
+                                        d
+                                    )
+                                )
+                            },
+                            Calendar.getInstance().get(Calendar.YEAR),
+                            Calendar.getInstance().get(Calendar.MONTH),
+                            Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+                        ).show()
+                    },
+                    label = { Text("Ngày") }
+                )
+
+                FilterChip(
+                    selected =
+                        mode ==
+                                TransactionViewModel.FilterMode.MONTH,
+                    onClick = {
+                        mode =
+                            TransactionViewModel.FilterMode.MONTH
+                    },
+                    label = { Text("Tháng") }
+                )
+
+                FilterChip(
+                    selected =
+                        mode ==
+                                TransactionViewModel.FilterMode.YEAR,
+                    onClick = {
+                        mode =
+                            TransactionViewModel.FilterMode.YEAR
+                    },
+                    label = { Text("Năm") }
+                )
+
+                FilterChip(
+                    selected =
+                        mode ==
+                                TransactionViewModel.FilterMode.ALL,
+                    onClick = {
+                        mode =
+                            TransactionViewModel.FilterMode.ALL
+                    },
+                    label = { Text("Tất cả") }
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            if (mode == TransactionViewModel.FilterMode.MONTH) {
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp)
+                ) {
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement =
+                            Arrangement.SpaceBetween,
+                        verticalAlignment =
+                            Alignment.CenterVertically
+                    ) {
+
+                        IconButton(
+                            onClick = {
+                                vm.prevMonth()
+                            }
+                        ) {
+                            Text("◀")
+                        }
+
+                        Text(
+                            text =
+                                "Tháng ${vm.selectedMonth}/${vm.selectedYear}",
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        IconButton(
+                            onClick = {
+                                vm.nextMonth()
+                            }
+                        ) {
+                            Text("▶")
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            if (transactions.isEmpty()) {
+
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+
+                    Text(
+                        "📭 Không có giao dịch",
+                        color = Color.Gray
+                    )
+                }
+            } else {
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+
+                    grouped.forEach { (date, list) ->
+
+                        item {
+
+                            Text(
+                                text = date,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(12.dp)
+                            )
+                        }
+
+                        items(list) { item ->
+
+                            TransactionItem(
+                                t = item,
+                                onClick = {
+                                    navController.navigate(
+                                        "transaction_detail/${item.id}"
+                                    )
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun HistoryItem(
-    transaction : Transaction,
-    onClick     : () -> Unit,
-    onLongClick : () -> Unit
+fun SummaryItem(
+    title: String,
+    value: String,
+    color: Color
 ) {
-    val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
+
+    Column(
+        horizontalAlignment =
+            Alignment.CenterHorizontally
+    ) {
+
+        Text(
+            title,
+            color = Color.Gray
+        )
+
+        Text(
+            value,
+            color = color,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+fun TransactionItem(
+    t: Transaction,
+    onClick: () -> Unit
+) {
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .combinedClickable(
-                onClick     = onClick,
-                onLongClick = onLongClick
+            .padding(
+                horizontal = 12.dp,
+                vertical = 4.dp
             )
+            .clickable {
+                onClick()
+            }
     ) {
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment     = Alignment.CenterVertically
+                .padding(14.dp),
+            horizontalArrangement =
+                Arrangement.SpaceBetween,
+            verticalAlignment =
+                Alignment.CenterVertically
         ) {
-            Column {
-                Text(transaction.title, style = MaterialTheme.typography.bodyLarge)
+
+            Row(
+                verticalAlignment =
+                    Alignment.CenterVertically
+            ) {
+
                 Text(
-                    dateFormat.format(Date(transaction.date)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    if (t.type == "income")
+                        "🟢"
+                    else
+                        "🔴"
                 )
+
+                Spacer(
+                    Modifier.width(10.dp)
+                )
+
+                Column {
+
+                    Text(
+                        t.title,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    if (t.note.isNotBlank()) {
+
+                        Text(
+                            t.note,
+                            color = Color.Gray,
+                            style =
+                                MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
             }
+
             Text(
-                text  = (if (transaction.type == "income") "+" else "-") +
-                        formatMoney(transaction.amount),
-                color = if (transaction.type == "income") Color(0xFF1A5C3A) else Color(0xFFB00020),
-                style = MaterialTheme.typography.bodyLarge
+                text =
+                    if (t.type == "income")
+                        "+${formatMoney(t.amount)}"
+                    else
+                        "-${formatMoney(t.amount)}",
+                color =
+                    if (t.type == "income")
+                        Color(0xFF4CAF50)
+                    else
+                        Color.Red,
+                fontWeight = FontWeight.Bold
             )
         }
     }
