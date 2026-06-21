@@ -11,9 +11,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.spendwise.data.entity.Category
 import com.example.spendwise.data.entity.Transaction
 import com.example.spendwise.viewmodel.TransactionViewModel
 import com.example.spendwise.utils.ThousandsSeparatorTransformation
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTransactionScreen(
@@ -24,6 +26,15 @@ fun AddTransactionScreen(
     val isEditMode = transactionId != -1
     val categories by vm.allCategories.observeAsState(emptyList())
 
+    // ── FIX: Lấy transaction cũ theo id khi ở edit mode ─────────────────────────
+    // getById trả về LiveData<Transaction?> — observeAsState với initial = null vì
+    // dữ liệu chỉ có sau khi Room trả về (bất đồng bộ), tránh giả định có sẵn ngay.
+    val existingTransaction by if (isEditMode) {
+        vm.getById(transactionId).observeAsState(initial = null)
+    } else {
+        remember { mutableStateOf<Transaction?>(null) }
+    }
+
     // ── State ─────────────────────────────────────────────────────────────────
     var title       by remember { mutableStateOf("") }
     var amount      by remember { mutableStateOf("") }
@@ -33,6 +44,28 @@ fun AddTransactionScreen(
     var typeExpanded     by remember { mutableStateOf(false) }
     var categoryExpanded by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
+
+    // ── State cho tạo danh mục mới ngay trong dropdown (giống BudgetScreen) ────
+    var isCreatingCategory by remember { mutableStateOf(false) }
+    var newCategoryName    by remember { mutableStateOf("") }
+
+    // ── FIX: Cờ đảm bảo chỉ fill dữ liệu vào form MỘT LẦN duy nhất khi
+    // existingTransaction lần đầu có giá trị (LiveData có thể emit lại nhiều lần
+    // khi dữ liệu trong DB thay đổi — nếu không có cờ này, mọi lần emit lại sẽ
+    // ghi đè đè lên những gì người dùng đang gõ, làm mất nội dung đang sửa).
+    var hasPrefilled by remember { mutableStateOf(false) }
+
+    LaunchedEffect(existingTransaction) {
+        val tx = existingTransaction
+        if (tx != null && !hasPrefilled) {
+            title      = tx.title
+            amount     = tx.amount.toLong().toString()
+            note       = tx.note
+            type       = tx.type
+            categoryId = tx.categoryId
+            hasPrefilled = true
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -94,17 +127,27 @@ fun AddTransactionScreen(
                 ) {
                     DropdownMenuItem(
                         text    = { Text("Chi tiêu") },
-                        onClick = { type = "expense"; typeExpanded = false }
+                        onClick = {
+                            type = "expense"
+                            typeExpanded = false
+                            // FIX: đổi loại thì danh mục cũ (thuộc loại khác) không còn hợp lệ
+                            categoryId = null
+                        }
                     )
                     DropdownMenuItem(
                         text    = { Text("Thu nhập") },
-                        onClick = { type = "income"; typeExpanded = false }
+                        onClick = {
+                            type = "income"
+                            typeExpanded = false
+                            categoryId = null
+                        }
                     )
                 }
             }
 
-            // ── Danh mục ──────────────────────────────────────────────────────
+            // ── Danh mục (kèm tạo danh mục mới — giống pattern BudgetScreen) ────
             val filteredCategories = categories.filter { it.type == type }
+
             ExposedDropdownMenuBox(
                 expanded         = categoryExpanded,
                 onExpandedChange = { categoryExpanded = it }
@@ -126,6 +169,60 @@ fun AddTransactionScreen(
                             text    = { Text(cat.name) },
                             onClick = { categoryId = cat.id; categoryExpanded = false }
                         )
+                    }
+
+                    // FIX: Thêm tùy chọn "+ Thêm danh mục mới" — cùng pattern như BudgetScreen
+                    DropdownMenuItem(
+                        text    = { Text("+ Thêm danh mục mới") },
+                        onClick = {
+                            isCreatingCategory = true
+                            categoryExpanded = false
+                        }
+                    )
+                }
+            }
+
+            // ── Form tạo danh mục mới (hiện ngay dưới dropdown khi bật) ─────────
+            if (isCreatingCategory) {
+                OutlinedTextField(
+                    value         = newCategoryName,
+                    onValueChange = { newCategoryName = it },
+                    label         = { Text("Tên danh mục mới") },
+                    modifier      = Modifier.fillMaxWidth(),
+                    singleLine    = true
+                )
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Button(
+                        onClick = {
+                            if (newCategoryName.isNotBlank()) {
+                                // type hiện tại (income/expense) quyết định loại danh mục mới,
+                                // đúng với việc filteredCategories đang lọc theo `type`.
+                                vm.insertCategory(
+                                    Category(name = newCategoryName.trim(), icon = "ic_other", type = type)
+                                ) { newId ->
+                                    categoryId = newId.toInt()
+                                }
+                                isCreatingCategory = false
+                                newCategoryName = ""
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Tạo danh mục")
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            isCreatingCategory = false
+                            newCategoryName = ""
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Hủy")
                     }
                 }
             }
@@ -152,7 +249,7 @@ fun AddTransactionScreen(
                     when {
                         title.isBlank()        -> errorMessage = "Vui lòng nhập tên giao dịch"
                         amountVal == null
-                        || amountVal <= 0      -> errorMessage = "Số tiền không hợp lệ"
+                                || amountVal <= 0      -> errorMessage = "Số tiền không hợp lệ"
                         else -> {
                             val transaction = Transaction(
                                 id         = if (isEditMode) transactionId else 0,
@@ -161,7 +258,10 @@ fun AddTransactionScreen(
                                 type       = type,
                                 categoryId = categoryId,
                                 note       = note.trim(),
-                                date       = System.currentTimeMillis()
+                                // FIX: giữ nguyên ngày gốc khi sửa giao dịch, không ghi đè
+                                // thành thời điểm hiện tại — nếu không, mỗi lần sửa sẽ làm
+                                // giao dịch "nhảy" lên đầu danh sách theo ngày mới.
+                                date       = existingTransaction?.date ?: System.currentTimeMillis()
                             )
                             if (isEditMode) vm.update(transaction)
                             else            vm.insert(transaction)
