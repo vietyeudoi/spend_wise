@@ -8,15 +8,17 @@ import com.example.spendwise.data.entity.Category
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class CategoryRepository(application: Application) {
+class CategoryRepository private constructor(application: Application) {
 
     private val dao: CategoryDao
     private val executor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
     init {
         val db = AppDatabase.getInstance(application)
         dao = db.categoryDao()
-        // Tự động thêm danh mục mặc định nếu chưa có
+        // Tự động thêm danh mục mặc định nếu chưa có — chỉ chạy 1 lần duy nhất
+        // vì CategoryRepository giờ là singleton (xem companion object bên dưới)
         executor.execute { seedIfEmpty() }
     }
 
@@ -26,6 +28,14 @@ class CategoryRepository(application: Application) {
 
     fun insert(category: Category) {
         executor.execute { dao.insert(category) }
+    }
+
+    // Insert kèm callback, kết quả trả về trên main thread (an toàn cho Toast/Compose state)
+    fun insert(category: Category, onComplete: (Long) -> Unit) {
+        executor.execute {
+            val id = dao.insert(category)
+            mainHandler.post { onComplete(id) }
+        }
     }
 
     fun update(category: Category) {
@@ -45,6 +55,16 @@ class CategoryRepository(application: Application) {
     }
 
     companion object {
+
+        @Volatile
+        private var INSTANCE: CategoryRepository? = null
+
+        // ── Singleton: mọi ViewModel dùng chung 1 instance duy nhất ───────────────
+        fun getInstance(application: Application): CategoryRepository =
+            INSTANCE ?: synchronized(this) {
+                INSTANCE ?: CategoryRepository(application).also { INSTANCE = it }
+            }
+
         private val DEFAULT_CATEGORIES = listOf(
             Category(name = "Ăn uống", icon = "ic_food", type = "expense"),
             Category(name = "Đi lại", icon = "ic_transport", type = "expense"),

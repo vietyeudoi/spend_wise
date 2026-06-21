@@ -6,6 +6,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -13,19 +15,21 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.spendwise.ui.home.*
+import com.example.spendwise.utils.ExportUtils
 import com.example.spendwise.viewmodel.TransactionViewModel
 import com.github.mikephil.charting.animation.Easing
 import com.github.mikephil.charting.charts.PieChart
 import com.github.mikephil.charting.data.PieData
 import com.github.mikephil.charting.data.PieDataSet
 import com.github.mikephil.charting.data.PieEntry
-import java.util.Locale // ĐÃ THÊM: Import thư viện Locale để định dạng chuỗi phần trăm (%) tỷ lệ chi tiêu
+import java.util.Locale
 
 val ChartColors = listOf(
     Color(0xFF007AFF).hashCode(), Color(0xFF34C759).hashCode(), Color(0xFFFF9500).hashCode(),
@@ -35,7 +39,9 @@ val ChartColors = listOf(
 @Composable
 fun StatsScreen(vm: TransactionViewModel = viewModel()) {
 
-    val spending by vm.getCategorySpending().observeAsState(emptyList())
+    val context = LocalContext.current
+    val transactions by vm.getTransactions().observeAsState(emptyList())
+    val spending by vm.categorySpending().observeAsState(emptyList())
     val totalSpending = spending.sumOf { it.total }
 
     Scaffold(
@@ -51,6 +57,14 @@ fun StatsScreen(vm: TransactionViewModel = viewModel()) {
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp
                     )
+                },
+                actions = {
+                    IconButton(onClick = { ExportUtils.exportToCsv(context, transactions) }) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "Xuất CSV"
+                        )
+                    }
                 }
             )
         }

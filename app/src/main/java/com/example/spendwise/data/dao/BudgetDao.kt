@@ -64,6 +64,20 @@ interface BudgetDao {
         year: Int
     ): LiveData<List<Budget>>
 
+    @Query(
+        """
+        SELECT *
+        FROM budgets
+        WHERE month = :month
+        AND year = :year
+        ORDER BY id DESC
+        """
+    )
+    fun getByMonthSync(
+        month: Int,
+        year: Int
+    ): List<Budget>
+
 
 
     /*
@@ -146,4 +160,6 @@ interface BudgetDao {
         year: Int
     )
 
+    @Query("SELECT COALESCE(SUM(limitAmount), 0.0) FROM budgets WHERE month = :month AND year = :year")
+    fun getTotalBudgetLimit(month: Int, year: Int): LiveData<Double>
 }

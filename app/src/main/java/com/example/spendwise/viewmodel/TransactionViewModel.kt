@@ -19,7 +19,7 @@ class TransactionViewModel(application: Application) :
     AndroidViewModel(application) {
 
     private val transactionRepo = TransactionRepository(application)
-    private val categoryRepo = CategoryRepository(application)
+    private val categoryRepo = CategoryRepository.getInstance(application)
 
     // ================= BUDGET =================
     private val prefs =
@@ -122,6 +122,10 @@ class TransactionViewModel(application: Application) :
         }
     }
 
+    fun insertCategory(category: Category, onComplete: (Long) -> Unit) {
+        categoryRepo.insert(category, onComplete)
+    }
+
     fun getIncome(): LiveData<Double> =
         transactionRepo.getTotalByTypeAndMonth(
             "income",
@@ -142,6 +146,10 @@ class TransactionViewModel(application: Application) :
             selectedYear.toString()
         )
 
+    fun categorySpending(month: Int = selectedMonth, year: Int = selectedYear): LiveData<List<CategoryTotal>> {
+        return transactionRepo.getSpendingByCategory(month, year.toString())
+    }
+
     // ================= CRUD =================
     fun insert(transaction: Transaction) = transactionRepo.insert(transaction)
     fun update(transaction: Transaction) = transactionRepo.update(transaction)
@@ -151,4 +159,7 @@ class TransactionViewModel(application: Application) :
 
     fun getById(id: Int): LiveData<Transaction?> =
         transactionRepo.getById(id)
+
+    fun getTodayExpense(startOfDay: Long, endOfDay: Long): LiveData<Double> =
+        transactionRepo.getTodayExpense(startOfDay, endOfDay)
 }

@@ -81,9 +81,37 @@ interface TransactionDao {
     """)
     fun getSpendingByCategory(month: Int, year: String): LiveData<List<CategoryTotal>>
 
+    @Query("""
+        SELECT t.categoryId as categoryId, c.name as categoryName, SUM(t.amount) as total
+        FROM transactions t
+        INNER JOIN categories c ON t.categoryId = c.id
+        WHERE t.type = 'expense'
+        AND strftime('%m', t.date / 1000, 'unixepoch') = printf('%02d', :month)
+        AND strftime('%Y', t.date / 1000, 'unixepoch') = :year
+        GROUP BY t.categoryId
+        ORDER BY total DESC
+    """)
+    fun getSpendingByCategorySync(month: Int, year: String): List<CategoryTotal>
+
     // Tìm kiếm theo tên giao dịch
-    @Query("SELECT * FROM transactions WHERE title LIKE '%' || :keyword || '%' ORDER BY date DESC")
+    @Query("""
+    SELECT t.* FROM transactions t
+    LEFT JOIN categories c ON t.categoryId = c.id
+    WHERE t.title LIKE '%' || :keyword || '%'
+       OR t.note  LIKE '%' || :keyword || '%'
+       OR c.name  LIKE '%' || :keyword || '%'
+    ORDER BY t.date DESC
+""")
     fun search(keyword: String): LiveData<List<Transaction>>
+
+    @Query("""
+        SELECT COALESCE(SUM(amount), 0.0) 
+        FROM transactions 
+        WHERE type = 'expense' 
+        AND date >= :startOfDay 
+        AND date <= :endOfDay
+    """)
+    fun getTodayExpense(startOfDay: Long, endOfDay: Long): LiveData<Double>
 }
 
 // Data class nhỏ để nhận kết quả query tổng theo danh mục

@@ -79,5 +79,9 @@ class BudgetRepository(
 
     }
 
+    fun getTotalBudgetLimit(month: Int, year: Int): LiveData<Double> {
+        return dao.getTotalBudgetLimit(month, year)
+    }
+
 
 }

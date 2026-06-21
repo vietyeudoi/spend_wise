@@ -19,7 +19,10 @@ sealed class Screen(val route: String) {
 
     object AddTransaction : Screen("add_transaction")
 
-    object History : Screen("history")
+    object History : Screen("history/{categoryId}") {
+        fun createRoute(categoryId: Int) = "history/$categoryId"
+        const val ARG_CATEGORY_ID = "categoryId"
+    }
 
     object Stats : Screen("stats")
 
@@ -81,9 +84,17 @@ fun SpendWiseNavHost(
             )
         }
 
-        composable(Screen.History.route) {
+        composable(
+            route = Screen.History.route,
+            arguments = listOf(navArgument(Screen.History.ARG_CATEGORY_ID) {
+                type = NavType.IntType
+                defaultValue = -1
+            })
+        ) { backStackEntry ->
+            val categoryId = backStackEntry.arguments?.getInt(Screen.History.ARG_CATEGORY_ID) ?: -1
             HistoryScreen(
-                navController = navController
+                navController = navController,
+                categoryId = categoryId
             )
         }
         composable(
@@ -114,6 +125,6 @@ fun SpendWiseNavHost(
             )
         }
         composable(Screen.Stats.route)  { StatsScreen() }
-        composable(Screen.Budget.route) { BudgetScreen() }
+        composable(Screen.Budget.route) { BudgetScreen(navController = navController) }
     }
 }

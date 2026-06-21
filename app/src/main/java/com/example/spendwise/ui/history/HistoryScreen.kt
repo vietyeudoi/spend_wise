@@ -1,10 +1,17 @@
 package com.example.spendwise.ui.history
 
 import android.app.DatePickerDialog
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.material3.FilterChip
 import androidx.compose.runtime.*
@@ -19,15 +26,21 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.spendwise.data.entity.Transaction
 import com.example.spendwise.ui.home.formatMoney
+import com.example.spendwise.utils.ExportUtils
+import com.example.spendwise.utils.OverTextColor
+import com.example.spendwise.utils.isOverBudget
+import com.example.spendwise.viewmodel.BudgetViewModel
 import com.example.spendwise.viewmodel.TransactionViewModel
 import java.text.SimpleDateFormat
 import java.util.*
-
+import androidx.compose.material.icons.filled.Search
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(
     navController: NavController,
-    vm: TransactionViewModel = viewModel()
+    vm: TransactionViewModel = viewModel(),
+    budgetVm: BudgetViewModel = viewModel(),
+    categoryId: Int = -1
 ) {
 
     val context = LocalContext.current
@@ -35,6 +48,7 @@ fun HistoryScreen(
     var mode by remember {
         mutableStateOf(TransactionViewModel.FilterMode.MONTH)
     }
+    var searchQuery by remember { mutableStateOf("") }
 
     LaunchedEffect(mode) {
 
@@ -63,10 +77,44 @@ fun HistoryScreen(
     val expense by vm.getExpense()
         .observeAsState(0.0)
 
-    val totalIncome = income ?: 0.0
-    val totalExpense = expense ?: 0.0
+    val categories by vm.allCategories.observeAsState(emptyList())
+    val budgets by budgetVm.getBudgetsForMonth(vm.selectedMonth, vm.selectedYear).observeAsState(emptyList())
+    val spending by vm.categorySpending().observeAsState(emptyList())
 
-    val grouped = transactions.groupBy {
+    var activeCategoryId by remember(categoryId) {
+        mutableStateOf(categoryId)
+    }
+    var showExportMenu by remember { mutableStateOf(false) }
+
+    val activeCategory = categories.find { it.id == activeCategoryId }
+
+    val filteredTransactions = remember(transactions, activeCategoryId, searchQuery, categories) {
+        val byCategory = if (activeCategoryId == -1) transactions
+        else transactions.filter { it.categoryId == activeCategoryId }
+
+        if (searchQuery.isBlank()) {
+            byCategory
+        } else {
+            val q = searchQuery.trim().lowercase()
+            byCategory.filter { t ->
+                val catName = categories.find { it.id == t.categoryId }?.name ?: ""
+                t.title.lowercase().contains(q) ||
+                        t.note.lowercase().contains(q) ||
+                        catName.lowercase().contains(q)
+            }
+        }
+    }
+
+    val totalIncome = remember(filteredTransactions, income) {
+        if (activeCategoryId == -1) (income ?: 0.0)
+        else filteredTransactions.filter { it.type == "income" }.sumOf { it.amount }
+    }
+    val totalExpense = remember(filteredTransactions, expense) {
+        if (activeCategoryId == -1) (expense ?: 0.0)
+        else filteredTransactions.filter { it.type == "expense" }.sumOf { it.amount }
+    }
+
+    val grouped = filteredTransactions.groupBy {
         SimpleDateFormat(
             "dd/MM/yyyy",
             Locale.getDefault()
@@ -81,6 +129,42 @@ fun HistoryScreen(
                         "Lịch sử giao dịch",
                         fontWeight = FontWeight.Bold
                     )
+                },
+                actions = {
+                    IconButton(onClick = { ExportUtils.exportToCsv(context, filteredTransactions) }) {
+
+
+// Thêm state trong Composable
+                        var showExportMenu by remember { mutableStateOf(false) }
+
+// Thay icon Share cũ bằng:
+                        Box {
+                            IconButton(onClick = { showExportMenu = true }) {
+                                Icon(imageVector = Icons.Default.Share, contentDescription = "Xuất dữ liệu")
+                            }
+                            DropdownMenu(
+                                expanded = showExportMenu,
+                                onDismissRequest = { showExportMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Chia sẻ") },
+                                    leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) },
+                                    onClick = {
+                                        ExportUtils.shareCsv(context, filteredTransactions)
+                                        showExportMenu = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Lưu về máy") },
+                                    leadingIcon = { Icon(Icons.Default.Download, contentDescription = null) },
+                                    onClick = {
+                                        ExportUtils.saveToDevice(context, filteredTransactions)
+                                        showExportMenu = false
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
             )
         }
@@ -124,11 +208,29 @@ fun HistoryScreen(
 
                     SummaryItem(
                         "GD",
-                        transactions.size.toString(),
+                        filteredTransactions.size.toString(),
                         Color.Blue
                     )
                 }
             }
+
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = { Text("Tìm theo tên, ghi chú, danh mục...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Tìm kiếm") },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = "Xóa tìm kiếm")
+                        }
+                    }
+                },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
+            )
 
             Row(
                 modifier = Modifier
@@ -246,9 +348,45 @@ fun HistoryScreen(
                 }
             }
 
+            if (activeCategory != null) {
+                Spacer(Modifier.height(8.dp))
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Đang lọc: ${activeCategory.name}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        IconButton(
+                            onClick = { activeCategoryId = -1 },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Xóa lọc",
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
             Spacer(Modifier.height(8.dp))
 
-            if (transactions.isEmpty()) {
+            if (filteredTransactions.isEmpty()) {
 
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -278,9 +416,15 @@ fun HistoryScreen(
                         }
 
                         items(list) { item ->
+                            val itemBudget = budgets.find { it.categoryId == item.categoryId }
+                            val itemSpent = spending.find { it.categoryId == item.categoryId }?.total ?: 0.0
+                            val isOver = if (itemBudget != null) isOverBudget(itemSpent, itemBudget.limitAmount) else false
+                            val catName = categories.find { it.id == item.categoryId }?.name ?: ""
 
                             TransactionItem(
                                 t = item,
+                                isCategoryOverBudget = isOver,
+                                categoryName = catName,
                                 onClick = {
                                     navController.navigate(
                                         "transaction_detail/${item.id}"
@@ -323,6 +467,8 @@ fun SummaryItem(
 @Composable
 fun TransactionItem(
     t: Transaction,
+    isCategoryOverBudget: Boolean,
+    categoryName: String,
     onClick: () -> Unit
 ) {
 
@@ -350,7 +496,8 @@ fun TransactionItem(
 
             Row(
                 verticalAlignment =
-                    Alignment.CenterVertically
+                    Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
             ) {
 
                 Text(
@@ -365,11 +512,40 @@ fun TransactionItem(
                 )
 
                 Column {
-
-                    Text(
-                        t.title,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            t.title,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (categoryName.isNotEmpty()) {
+                            Spacer(Modifier.width(8.dp))
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = categoryName,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    if (isCategoryOverBudget) {
+                                        Spacer(Modifier.width(4.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .size(6.dp)
+                                                .background(OverTextColor, CircleShape)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
 
                     if (t.note.isNotBlank()) {
 

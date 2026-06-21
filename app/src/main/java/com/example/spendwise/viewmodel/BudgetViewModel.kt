@@ -6,6 +6,7 @@ import androidx.compose.runtime.*
 import androidx.lifecycle.*
 import com.example.spendwise.data.entity.Budget
 import com.example.spendwise.data.repository.BudgetRepository
+import com.example.spendwise.data.repository.CategoryRepository
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
@@ -19,6 +20,8 @@ class BudgetViewModel(
 
     private val repo =
         BudgetRepository(application)
+
+    private val categoryRepo = CategoryRepository.getInstance(application)
 
 
 
@@ -48,6 +51,17 @@ class BudgetViewModel(
                 selectedMonth,
                 selectedYear
             )
+
+    fun getBudgetsForMonth(month: Int, year: Int): LiveData<List<Budget>> {
+        return repo.getByMonth(month, year)
+    }
+
+    val totalBudgetLimit: LiveData<Double>
+        get() = repo.getTotalBudgetLimit(selectedMonth, selectedYear)
+
+    fun getTotalBudgetLimit(month: Int, year: Int): LiveData<Double> {
+        return repo.getTotalBudgetLimit(month, year)
+    }
 
 
 
@@ -159,5 +173,38 @@ class BudgetViewModel(
 
     }
 
+    fun insertCategoryAndBudget(
+        categoryName: String,
+        limitAmount: Double,
+        month: Int,
+        year: Int,
+        onComplete: () -> Unit
+    ) {
+        val newCategory = com.example.spendwise.data.entity.Category(
+            name = categoryName,
+            icon = "ic_custom",
+            type = "expense"
+        )
+
+        // Insert category trước, lấy id qua callback (chạy trên main thread, an toàn)
+        categoryRepo.insert(newCategory) { newId ->
+            val budget = Budget(
+                categoryId  = newId.toInt(),   // ép kiểu Long → Int
+                limitAmount = limitAmount,
+                month       = month,
+                year        = year
+            )
+
+            viewModelScope.launch {
+                val old = repo.checkExist(budget.categoryId, month, year)
+                if (old != null) {
+                    repo.update(budget.copy(id = old.id))
+                } else {
+                    repo.insert(budget)
+                }
+                onComplete()
+            }
+        }
+    }
 
 }

@@ -28,7 +28,7 @@ class MainActivity : ComponentActivity() {
                 // Các tab hiển thị BottomBar
                 val bottomNavItems = listOf(
                     BottomNavItem("Tổng quan", Screen.Home.route,    Icons.Default.Home),
-                    BottomNavItem("Lịch sử",   Screen.History.route, Icons.Default.List),
+                    BottomNavItem("Lịch sử",   Screen.History.createRoute(-1), Icons.Default.List),
                     BottomNavItem("Thống kê",  Screen.Stats.route,   Icons.Default.BarChart),
                     BottomNavItem("Ngân sách", Screen.Budget.route,  Icons.Default.Wallet),
                 )
@@ -46,8 +46,12 @@ class MainActivity : ComponentActivity() {
                         if (showBottomBar) {
                             NavigationBar {
                                 bottomNavItems.forEach { item ->
+                                    val isSelected = when {
+                                        item.route.startsWith("history") -> currentRoute?.startsWith("history") == true
+                                        else -> currentRoute == item.route
+                                    }
                                     NavigationBarItem(
-                                        selected = currentRoute == item.route,
+                                        selected = isSelected,
                                         onClick  = {
                                             navController.navigate(item.route) {
                                                 // Tránh tạo nhiều bản sao trong back stack

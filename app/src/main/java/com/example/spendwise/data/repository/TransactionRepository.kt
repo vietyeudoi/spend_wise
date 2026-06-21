@@ -61,4 +61,8 @@ class TransactionRepository(application: Application) {
 
     fun getByYear(year: String): LiveData<List<Transaction>> =
         dao.getByYear(year)
+
+    fun getTodayExpense(startOfDay: Long, endOfDay: Long): LiveData<Double> =
+        dao.getTodayExpense(startOfDay, endOfDay)
+
 }

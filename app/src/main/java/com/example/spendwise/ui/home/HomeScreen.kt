@@ -13,18 +13,24 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.spendwise.data.entity.Transaction
+import com.example.spendwise.service.BudgetAlertService
+import com.example.spendwise.utils.OverTextColor
+import com.example.spendwise.utils.isOverBudget
+import com.example.spendwise.viewmodel.BudgetViewModel
 import com.example.spendwise.viewmodel.TransactionViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -43,14 +49,24 @@ val TextDark = Color(0xFF1C1C1E)
 @Composable
 fun HomeScreen(
     onNavigateToAdd: () -> Unit,
-    vm: TransactionViewModel = viewModel()
+    vm: TransactionViewModel = viewModel(),
+    budgetVm: BudgetViewModel = viewModel()
 ) {
+    val context = LocalContext.current
     val totalIncome by vm.getIncome().observeAsState(0.0)
     val totalExpense by vm.getExpense().observeAsState(0.0)
     val transactions by vm.getTransactions().observeAsState(initial = emptyList())
 
-    val budgetAmount = vm.budget
-    val remainingBudget = budgetAmount - totalExpense
+    val budgets by budgetVm.getBudgetsForMonth(vm.selectedMonth, vm.selectedYear).observeAsState(emptyList())
+    val spending by vm.categorySpending().observeAsState(emptyList())
+
+    val hasOverBudgetCategory = budgets.any { budget ->
+        val spent = spending.find { it.categoryId == budget.categoryId }?.total ?: 0.0
+        isOverBudget(spent, budget.limitAmount)
+    }
+
+    val totalBudgetLimit by budgetVm.totalBudgetLimit.observeAsState(0.0)
+    val remainingBudget = totalBudgetLimit - totalExpense
 
     Scaffold(
         containerColor = BackgroundGray,
@@ -84,6 +100,21 @@ fun HomeScreen(
                         }
                     },
                     actions = {
+                        IconButton(onClick = { BudgetAlertService.start(context) }) {
+                            BadgedBox(
+                                badge = {
+                                    if (hasOverBudgetCategory) {
+                                        Badge(containerColor = OverTextColor)
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = "Cảnh báo ngân sách",
+                                    tint = if (hasOverBudgetCategory) OverTextColor else BrandBlue
+                                )
+                            }
+                        }
                         IconButton(onClick = { /* Hành động mở lịch */ }) {
                             Icon(Icons.Default.DateRange, contentDescription = "Lịch", tint = BrandBlue)
                         }
@@ -130,7 +161,7 @@ fun HomeScreen(
                     balance = totalIncome - totalExpense,
                     income = totalIncome,
                     expense = totalExpense,
-                    budget = budgetAmount,
+                    budget = totalBudgetLimit,
                     remaining = remainingBudget
                 )
             }
@@ -213,7 +244,7 @@ fun DashboardCard(
             ) {
                 Column {
                     Row {
-                        Text(text = "Hạn mức ngân sách: ", color = ContentGray, fontSize = 12.sp)
+                        Text(text = "Tổng hạn mức ngân sách: ", color = ContentGray, fontSize = 12.sp)
                         Text(text = formatMoney(budget), color = TextDark, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
                     Text(

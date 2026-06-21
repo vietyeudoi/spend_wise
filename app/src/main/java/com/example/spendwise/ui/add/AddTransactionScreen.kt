@@ -13,7 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.spendwise.data.entity.Transaction
 import com.example.spendwise.viewmodel.TransactionViewModel
-
+import com.example.spendwise.utils.ThousandsSeparatorTransformation
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTransactionScreen(
@@ -68,6 +68,8 @@ fun AddTransactionScreen(
                 value         = amount,
                 onValueChange = { amount = it },
                 label         = { Text("Số tiền (đ)") },
+                suffix = { Text("đ") },
+                visualTransformation = ThousandsSeparatorTransformation(),
                 modifier      = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 singleLine    = true

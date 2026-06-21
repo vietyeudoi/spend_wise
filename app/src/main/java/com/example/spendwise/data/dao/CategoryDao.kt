@@ -13,7 +13,7 @@ import com.example.spendwise.data.entity.Category
 interface CategoryDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(category: Category)
+    fun insert(category: Category): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertAll(categories: List<Category>)
