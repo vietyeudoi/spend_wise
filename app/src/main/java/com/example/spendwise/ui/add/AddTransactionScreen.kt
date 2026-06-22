@@ -272,6 +272,7 @@ fun AddTransactionScreen(
                                 date       = existingTransaction?.date ?: System.currentTimeMillis()
                             )
                             if (isEditMode) vm.update(transaction)
+
                             else            vm.insert(transaction)
                             onNavigateBack()
                         }
