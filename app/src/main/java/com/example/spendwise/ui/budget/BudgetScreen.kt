@@ -1,187 +1,180 @@
 package com.example.spendwise.ui.budget
 
-import android.widget.Toast
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.*
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
-import com.example.spendwise.data.entity.Budget
-import com.example.spendwise.navigation.Screen
-import com.example.spendwise.ui.home.BrandBlue
-import com.example.spendwise.ui.home.SurfaceWhite
-import com.example.spendwise.ui.home.formatMoney
-import com.example.spendwise.utils.*
-import com.example.spendwise.viewmodel.BudgetViewModel
-import com.example.spendwise.viewmodel.TransactionViewModel
-import androidx.compose.material.icons.filled.Delete
-import com.example.spendwise.data.entity.Category
-import com.example.spendwise.utils.ThousandsSeparatorTransformation
+// --- PHẦN 1: IMPORT CÁC THƯ VIỆN GIAO DIỆN VÀ LOGIC ---
+import androidx.compose.foundation.clickable // Giúp một thành phần (như Card) có thể nhấn vào được
+import androidx.compose.foundation.layout.* // Chứa các thành phần bố cục: Box, Column, Row, Spacer...
+import androidx.compose.foundation.lazy.* // Danh sách cuộn hiệu năng cao (chỉ vẽ những gì hiện trên màn hình)
+import androidx.compose.foundation.shape.CircleShape // Tạo hình dạng vòng tròn (cho nút bấm)
+import androidx.compose.material.icons.Icons // Bộ biểu tượng hệ thống
+import androidx.compose.material.icons.filled.Add // Biểu tượng dấu cộng (+)
+import androidx.compose.material3.* // Các thành phần giao diện chuẩn Material Design 3 (Card, Text, Button...)
+import androidx.compose.material3.DropdownMenu // Menu thả xuống để chọn lựa
+import androidx.compose.material3.DropdownMenuItem // Từng mục bên trong menu thả xuống
+import androidx.compose.material3.OutlinedButton // Nút bấm có đường viền thanh mảnh
+import androidx.compose.foundation.text.KeyboardOptions // Cấu hình kiểu bàn phím khi nhập liệu
+import androidx.compose.ui.text.input.KeyboardType // Định nghĩa kiểu bàn phím: Số, Chữ, Email...
+import androidx.compose.runtime.* // Thư viện cốt lõi để quản lý Trạng thái (State) trong Compose
+import androidx.compose.runtime.livedata.observeAsState // Chuyển đổi dữ liệu từ Room (LiveData) sang State để cập nhật UI
+import androidx.compose.ui.Alignment // Căn chỉnh các thành phần: giữa, trái, phải, trên, dưới
+import androidx.compose.ui.Modifier // Công cụ mạnh mẽ nhất để chỉnh sửa kích thước, màu sắc, lề (padding)...
+import androidx.compose.ui.text.font.FontWeight // Cấu hình độ đậm nhạt của chữ (Bold, Normal...)
+import androidx.compose.ui.unit.dp // Đơn vị đo khoảng cách chuẩn Android (Density-independent Pixels)
+import androidx.compose.ui.unit.sp // Đơn vị đo kích cỡ chữ chuẩn Android (Scale-independent Pixels)
+import androidx.lifecycle.viewmodel.compose.viewModel // Hàm để khởi tạo và quản lý ViewModel trong Compose
+import androidx.navigation.NavController // Biến dùng để điều hướng giữa các màn hình
+import com.example.spendwise.data.entity.Budget // Thực thể (Table) Ngân sách trong cơ sở dữ liệu
+import com.example.spendwise.ui.home.BrandBlue // Màu xanh chủ đạo của ứng dụng
+import com.example.spendwise.ui.home.SurfaceWhite // Màu trắng nền bề mặt
+import com.example.spendwise.ui.home.formatMoney // Hàm tự viết để biến 1000 thành "1.000 đ"
+import com.example.spendwise.utils.* // Các hàm tiện ích hỗ trợ tính toán khác
+import com.example.spendwise.viewmodel.BudgetViewModel // ViewModel xử lý các nghiệp vụ về Ngân sách
+import com.example.spendwise.viewmodel.TransactionViewModel // ViewModel xử lý các nghiệp vụ về Giao dịch
+import androidx.compose.material.icons.filled.Delete // Biểu tượng thùng rác dùng để xóa
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import com.example.spendwise.data.entity.Category // Thực thể (Table) Danh mục chi tiêu
+import com.example.spendwise.utils.ThousandsSeparatorTransformation // Tự động thêm dấu chấm khi người dùng gõ tiền
 
+/**
+ * MÀN HÌNH QUẢN LÝ NGÂN SÁCH (BUDGET SCREEN)
+ */
 @Composable
 fun BudgetScreen(
-    navController: NavController,
-    budgetVm: BudgetViewModel = viewModel(),
-    txVm: TransactionViewModel = viewModel()
+    navController: NavController, // Biến điều hướng màn hình
+    budgetVm: BudgetViewModel = viewModel(), // Khởi tạo ViewModel Ngân sách
+    txVm: TransactionViewModel = viewModel() // Khởi tạo ViewModel Giao dịch/Danh mục
 ){
+    // --- PHẦN 2: LẤY DỮ LIỆU TỪ CƠ SỞ DỮ LIỆU (QUAN SÁT QUA LIVEDATA) ---
 
+    // Lấy danh sách ngân sách của tháng đang chọn. Khi DB thay đổi, UI này tự vẽ lại.
+    val budgets by budgetVm.budgets.observeAsState(emptyList())
 
+    // Lấy toàn bộ danh mục để hiển thị tên danh mục (vì bảng Budget chỉ lưu ID danh mục)
+    val categories by txVm.allCategories.observeAsState(emptyList())
 
-    val budgets by
-    budgetVm.budgets.observeAsState(
-        emptyList()
-    )
-
-
-    val categories by
-    txVm.allCategories.observeAsState(
-        emptyList()
-    )
-
+    // Lấy thống kê số tiền đã tiêu thực tế theo từng danh mục trong tháng/năm hiện tại
     val spending by txVm.categorySpending(budgetVm.selectedMonth, budgetVm.selectedYear).observeAsState(emptyList())
 
+    // --- PHẦN 3: CÁC BIẾN TRẠNG THÁI (UI STATE) ---
 
+    // showDialog = true thì hiện bảng "Thêm ngân sách", false thì ẩn
+    var showDialog by remember { mutableStateOf(false) }
 
-    var showDialog by remember{
-        mutableStateOf(false)
-    }
+    // Lưu chuỗi tiền người dùng gõ vào ô nhập (ví dụ: "500000")
+    var amount by remember { mutableStateOf("") }
 
+    // Lưu ID danh mục mà người dùng đang chọn để đặt hạn mức
+    var selectedCategory by remember { mutableStateOf<Int?>(null) }
 
-    var amount by remember{
-        mutableStateOf("")
-    }
-
-
-    var selectedCategory by remember{
-        mutableStateOf<Int?>(null)
-    }
-
-    // State cho thêm danh mục mới ngay trong dialog
+    // isCreatingCategory = true nếu người dùng muốn gõ tên danh mục mới thay vì chọn cái có sẵn
     var isCreatingCategory by remember { mutableStateOf(false) }
+
+    // Lưu tên danh mục mới khi người dùng tự gõ
     var newCategoryName by remember { mutableStateOf("") }
+
+    // dropdownExpanded = true thì menu danh sách danh mục sẽ thả xuống
     var dropdownExpanded by remember { mutableStateOf(false) }
 
-    // State cho dialog sửa/xóa ngân sách
+    // editingBudget sẽ chứa đối tượng ngân sách nếu người dùng đang nhấn vào để sửa
     var editingBudget by remember { mutableStateOf<Budget?>(null) }
+
+    // Số tiền mới khi đang sửa ngân sách
     var editAmount by remember { mutableStateOf("") }
+
+    // showDeleteConfirm = true sẽ hiện hộp thoại "Bạn có chắc muốn xóa không?"
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
-
-
+    // --- PHẦN 4: BỐ CỤC GIAO DIỆN CHÍNH ---
     Scaffold(
-
+        // Cấu hình Nút  thêm
         floatingActionButton = {
-
             FloatingActionButton(
-                onClick = { showDialog = true },
-                containerColor = BrandBlue,
-                contentColor = SurfaceWhite,
-                shape = CircleShape,
-                elevation = FloatingActionButtonDefaults.elevation(8.dp),
-                modifier = Modifier.padding(bottom = 16.dp)
+                onClick = { showDialog = true }, // Nhấn vào sẽ bật Dialog thêm mới
+                containerColor = BrandBlue, // Đặt màu nền xanh
+                contentColor = SurfaceWhite, // Đặt màu icon trắng
+                shape = CircleShape, // Bo tròn nút thành hình tròn
+                elevation = FloatingActionButtonDefaults.elevation(8.dp), // Hiệu ứng bóng đổ
+                modifier = Modifier.padding(bottom = 16.dp) // Cách đáy 16dp
             ) {
-
+                // Hình ảnh dấu cộng nằm giữa nút
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = "Thêm ngân sách",
                     modifier = Modifier.size(24.dp)
                 )
-
             }
-
         }
+    ) { paddingValues -> //
 
-    ){padding->
-
-
-
+        // Xếp các thành phần theo hàng dọc
         Column(
-            Modifier
-                .padding(padding)
-                .padding(16.dp)
-        ){
-
-
+            modifier = Modifier
+                .padding(paddingValues) // Tránh vùng an toàn hệ thống
+                .padding(16.dp) // Thêm lề xung quanh nội dung 16dp
+        ) {
+            // --- HÀNG CHỌN THÁNG/NĂM ---
             Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement =
-                    Arrangement.SpaceBetween
-            ){
-
-                Button(
-                    onClick={
-                        budgetVm.prevMonth()
-                    }
-                ){
+                modifier = Modifier.fillMaxWidth(), // Rộng hết chiều ngang
+                horizontalArrangement = Arrangement.SpaceBetween, // Nút sang 2 bên, chữ ở giữa
+                verticalAlignment = Alignment.CenterVertically // Căn giữa các thành phần theo chiều dọc
+            ) {
+                // Nút bấm quay lại tháng trước
+                Button(onClick = { budgetVm.prevMonth() }) {
                     Text("<")
                 }
 
-
-
+                // Hiển thị chữ Tháng/Năm (VD: 6/2026)
                 Text(
-                    "${budgetVm.selectedMonth}/${budgetVm.selectedYear}",
-                    style =
-                        MaterialTheme.typography.titleLarge
+                    text = "${budgetVm.selectedMonth}/${budgetVm.selectedYear}",
+                    style = MaterialTheme.typography.titleLarge, // Font chữ lớn
+                    fontWeight = FontWeight.Bold // Kiểu chữ đậm
                 )
 
-
-
-                Button(
-                    onClick={
-                        budgetVm.nextMonth()
-                    }
-                ){
+                // Nút bấm tiến đến tháng sau
+                Button(onClick = { budgetVm.nextMonth() }) {
                     Text(">")
                 }
-
             }
 
+            // Khoảng trắng cao 16dp
+            Spacer(modifier = Modifier.height(16.dp))
 
-
-
-
-            LazyColumn{
-
+            // --- DANH SÁCH CÁC THẺ NGÂN SÁCH (LAZYCOLUMN) ---
+            LazyColumn {
+                // Duyệt qua từng bản ghi ngân sách trong danh sách
                 items(budgets) { budget ->
-                    val name = categories.find { it.id == budget.categoryId }?.name ?: ""
+                    // Tìm tên danh mục từ danh sách categories dựa trên ID
+                    val name = categories.find { it.id == budget.categoryId }?.name ?: "N/A"
+
+                    // Tìm số tiền đã tiêu thực tế của danh mục này (mặc định 0.0 nếu chưa tiêu gì)
                     val spent = spending.find { it.categoryId == budget.categoryId }?.total ?: 0.0
+
+                    // Kiểm tra: Nếu tiền tiêu > hạn mức thì báo vượt ngưỡng
                     val isOver = isOverBudget(spent, budget.limitAmount)
 
+                    // Thay đổi màu nền: Đỏ nhạt nếu vượt ngưỡng, Xám nhạt nếu bình thường
                     val cardBgColor = if (isOver) OverContainerColor else NormalContainerColor
+                    // Thay đổi màu chữ: Đỏ đậm nếu vượt ngưỡng, Xanh đậm nếu bình thường
                     val textColor = if (isOver) OverTextColor else NormalTextColor
 
+                    // Tính toán % tiến độ (ví dụ tiêu 500k/1tr thì progress = 0.5)
                     val progress = if (budget.limitAmount > 0) (spent / budget.limitAmount).toFloat().coerceIn(0f, 1f) else 0f
 
+                    // Thẻ Card hiển thị thông tin
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = cardBgColor),
+                        colors = CardDefaults.cardColors(containerColor = cardBgColor), // Áp dụng màu nền
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 6.dp)
+                            .fillMaxWidth() // Rộng hết cỡ
+                            .padding(vertical = 6.dp) // Cách các thẻ khác 6dp
                             .clickable {
+                                // Khi nhấn vào thẻ, gán đối tượng vào editingBudget để mở bảng sửa
                                 editingBudget = budget
                                 editAmount = budget.limitAmount.toString()
                             }
                     ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp)
-                        ) {
+                        // Nội dung bên trong Card
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            // Dòng: Tên danh mục và Trạng thái
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -193,6 +186,7 @@ fun BudgetScreen(
                                     color = textColor,
                                     fontSize = 18.sp
                                 )
+                                // Nhãn văn bản báo trạng thái
                                 Text(
                                     text = if (isOver) "Vượt ngưỡng!" else "Bình thường",
                                     style = MaterialTheme.typography.labelMedium,
@@ -203,13 +197,14 @@ fun BudgetScreen(
 
                             Spacer(modifier = Modifier.height(8.dp))
 
+                            // Dòng: Số tiền đã chi và Hạn mức đặt ra
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    text = "Đã chi: ${formatMoney(spent)}",
-                                    color = textColor.copy(alpha = 0.8f),
+                                    text = "Đã chi: ${formatMoney(spent)}", // Gọi hàm định dạng tiền
+                                    color = textColor.copy(alpha = 0.8f), // Chữ mờ hơn một chút
                                     fontSize = 14.sp
                                 )
                                 Text(
@@ -221,66 +216,67 @@ fun BudgetScreen(
 
                             Spacer(modifier = Modifier.height(8.dp))
 
+                            // Thanh Progress trực quan (Chạy từ trái sang phải)
                             LinearProgressIndicator(
-                                progress = { progress },
+                                progress = { progress }, // Giá trị phần trăm
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(8.dp),
-                                color = textColor,
-                                trackColor = textColor.copy(alpha = 0.2f),
-                                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+                                color = textColor, // Màu của phần đã tiêu
+                                trackColor = textColor.copy(alpha = 0.2f), // Màu của phần còn lại
+                                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round // Bo tròn đầu thanh
                             )
                         }
                     }
                 }
-
-
             }
-
-
         }
 
+        // --- PHẦN 5: CÁC HỘP THOẠI (DIALOGS) ---
 
-
-// ── Dialog sửa / xóa ngân sách ─────────────────────────────────────────────
-        editingBudget?.let { budget ->
+        // A. Hộp thoại SỬA / XÓA (Chỉ hiện khi editingBudget khác null)
+          editingBudget?.let { budget ->
+            // Tìm tên danh mục đang sửa
             val categoryName = categories.find { it.id == budget.categoryId }?.name ?: ""
 
             AlertDialog(
-                onDismissRequest = { editingBudget = null },
+                onDismissRequest = { editingBudget = null }, // Nhấn ra ngoài thì tắt
                 title = {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(categoryName)
+                        Text("Chỉnh sửa: $categoryName")
+                        // Nút  xóa
                         IconButton(onClick = { showDeleteConfirm = true }) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
-                                contentDescription = "Xóa ngân sách",
+                                contentDescription = "Xóa",
                                 tint = MaterialTheme.colorScheme.error
                             )
                         }
                     }
                 },
                 text = {
+                    // Ô nhập số tiền hạn mức mới
                     OutlinedTextField(
                         value = editAmount,
                         onValueChange = { editAmount = it },
-                        label = { Text("Hạn mức (đ)") },
+                        label = { Text("Hạn mức mới (đ)") },
                         suffix = { Text("đ") },
-                        visualTransformation = ThousandsSeparatorTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        visualTransformation = ThousandsSeparatorTransformation(), // Tự thêm dấu chấm phần nghìn
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), // Hiện bàn phím số
                         modifier = Modifier.fillMaxWidth()
                     )
                 },
                 confirmButton = {
-                    TextButton(onClick = {
+                    TextButton(onClick = { // nhấn nút lưu
                         val newAmount = editAmount.toDoubleOrNull()
                         if (newAmount != null && newAmount > 0) {
+                            // Cập nhật ngân sách vào DB thông qua ViewModel
                             budgetVm.update(budget.copy(limitAmount = newAmount))
-                            editingBudget = null
+                            editingBudget = null // Đóng dialog
                         }
                     }) {
                         Text("Lưu")
@@ -293,17 +289,17 @@ fun BudgetScreen(
                 }
             )
 
-            // ── Dialog xác nhận xóa (mở chồng lên trên) ────────────────────────────
+            // Dialog hỏi lại "Bạn có chắc chắn muốn xóa không?"
             if (showDeleteConfirm) {
                 AlertDialog(
                     onDismissRequest = { showDeleteConfirm = false },
                     title = { Text("Xóa ngân sách?") },
-                    text = { Text("Bạn có chắc muốn xóa ngân sách \"$categoryName\" không?") },
+                    text = { Text("Bạn có chắc muốn xóa hạn mức chi tiêu cho \"$categoryName\" không?") },
                     confirmButton = {
                         TextButton(onClick = {
-                            budgetVm.delete(budget)
-                            showDeleteConfirm = false
-                            editingBudget = null
+                            budgetVm.delete(budget) // Thực hiện xóa trong DB
+                            showDeleteConfirm = false // Đóng dialog hỏi
+                            editingBudget = null // Đóng dialog sửa
                         }) {
                             Text("Xóa", color = MaterialTheme.colorScheme.error)
                         }
@@ -316,47 +312,55 @@ fun BudgetScreen(
                 )
             }
         }
-
-
-
     }
 
-    // ── Dialog thêm ngân sách mới ──────────────────────────────────────────────
+    // B. Hộp thoại THÊM NGÂN SÁCH MỚI
     if (showDialog) {
         AlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = { Text("Thêm ngân sách") },
+            onDismissRequest = { showDialog = false }, //nhấn ra vùng trắng bên ngoài là tắt dialog
+            title = { Text("Thiết lập ngân sách") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Nếu người dùng chọn tự gõ danh mục mới
                     if (isCreatingCategory) {
                         OutlinedTextField(
                             value = newCategoryName,
-                            onValueChange = { newCategoryName = it },
+                            onValueChange = { newCategoryName = it }, //cập nhập tên danh mục
                             label = { Text("Tên danh mục mới") },
                             modifier = Modifier.fillMaxWidth()
                         )
                     } else {
+                        // Nếu chọn từ danh sách danh mục có sẵn
                         Box(modifier = Modifier.fillMaxWidth()) {
                             OutlinedButton(
-                                onClick = { dropdownExpanded = true },
+                                onClick = { dropdownExpanded = true },// clickvaof thì mở danh mục thả xuống
                                 modifier = Modifier.fillMaxWidth()
                             ) {
+                                // Hiển thị tên danh mục đã chọn, nếu chưa chọn thì hiện "Chọn danh mục"
                                 Text(categories.find { it.id == selectedCategory }?.name ?: "Chọn danh mục")
                             }
-                            DropdownMenu(expanded = dropdownExpanded, onDismissRequest = { dropdownExpanded = false }) {
+                            // Danh sách thả xuống
+                            DropdownMenu(
+                                expanded = dropdownExpanded,
+                                onDismissRequest = { dropdownExpanded = false }
+                            ) {
+                                // Chỉ lọc những danh mục thuộc loại Chi tiêu (expense)
                                 categories.filter { it.type == "expense" }.forEach { category ->
                                     DropdownMenuItem(
                                         text = { Text(category.name) },
                                         onClick = {
-                                            selectedCategory = category.id
-                                            dropdownExpanded = false
+                                            selectedCategory = category.id // Lưu ID danh mục được chọn
+                                            dropdownExpanded = false // Đóng menu thả xuống
                                         }
                                     )
                                 }
+                                // Vạch kẻ ngang
+                                HorizontalDivider()
+                                // Mục chọn để tự tạo danh mục mới
                                 DropdownMenuItem(
                                     text = { Text("+ Thêm danh mục mới") },
                                     onClick = {
-                                        isCreatingCategory = true
+                                        isCreatingCategory = true // Bật ô nhập tên danh mục
                                         dropdownExpanded = false
                                     }
                                 )
@@ -364,46 +368,56 @@ fun BudgetScreen(
                         }
                     }
 
+                    // Ô nhập số tiền hạn mức muốn đặt
                     OutlinedTextField(
                         value = amount,
-                        onValueChange = { amount = it },
-                        label = { Text("Số tiền") },
+                        onValueChange = { amount = it }, //cập nhập số tiền gõ
+                        label = { Text("Số tiền hạn mức") },
                         suffix = { Text("đ") },
-                        visualTransformation = ThousandsSeparatorTransformation(),
+                        visualTransformation = ThousandsSeparatorTransformation(), //tự thêm dấu chấm
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
             },
             confirmButton = {
+                // Khi nhấn Lưu
                 TextButton(onClick = {
-                    val enteredAmount = amount.toDoubleOrNull() ?: 0.0   // ✅ chụp giá trị NGAY, trước khi reset
+                    // chuyển số tiền từ chữ sang số  nếu lỗi mặc định
+                    val enteredAmount = amount.toDoubleOrNull() ?: 0.0
 
+
+                    // Trường hợp 1: Tạo mới hoàn toàn (Danh mục mới + Ngân sách mới)
                     if (isCreatingCategory && newCategoryName.isNotBlank()) {
+                        // Gọi hàm chèn danh mục mới vào DB trước
                         txVm.insertCategory(
                             Category(name = newCategoryName, icon = "ic_other", type = "expense")
                         ) { newId ->
+                            // Sau khi tạo xong danh mục, lấy ID đó để tạo tiếp Ngân sách
                             budgetVm.insert(
                                 Budget(
-                                    categoryId  = newId.toInt(),
-                                    limitAmount = enteredAmount,    // ✅ dùng giá trị đã chụp, không đọc lại state
+                                    categoryId  = newId.toInt(), //dùng id vừa sinh ra
+                                    limitAmount = enteredAmount,
                                     month       = budgetVm.selectedMonth,
                                     year        = budgetVm.selectedYear
                                 )
                             )
                         }
-                    } else if (selectedCategory != null) {
+                    }
+                    // Trường hợp 2: Chọn danh mục có sẵn và tạo ngân sách
+                    else if (selectedCategory != null) {
+                        // Chèn thẳng bản ghi Ngân sách với ID danh mục đã biết
                         budgetVm.insert(
                             Budget(
                                 categoryId  = selectedCategory!!,
-                                limitAmount = enteredAmount,        // ✅ đồng bộ luôn cho nhánh này
+                                limitAmount = enteredAmount,
                                 month       = budgetVm.selectedMonth,
                                 year        = budgetVm.selectedYear
                             )
                         )
                     }
 
-                    // Reset state dialog — an toàn vì enteredAmount đã được chụp riêng ở trên
+                    // Reset toàn bộ biến trạng thái về mặc định sau khi xong việc
                     isCreatingCategory = false
                     newCategoryName    = ""
                     selectedCategory   = null
@@ -414,6 +428,7 @@ fun BudgetScreen(
                 }
             },
             dismissButton = {
+                // Nhấn Hủy thì chỉ reset và đóng, không lưu gì cả
                 TextButton(onClick = {
                     isCreatingCategory = false
                     newCategoryName    = ""
@@ -426,7 +441,4 @@ fun BudgetScreen(
             }
         )
     }
-
-
-
 }

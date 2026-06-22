@@ -1,53 +1,31 @@
 package com.example.spendwise.data.dao
+// Khai báo package chứa DAO (Data Access Object) cho bảng Budget
 
-import androidx.lifecycle.LiveData
-import androidx.room.Dao
-import androidx.room.Delete
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
-import androidx.room.Update
-import com.example.spendwise.data.entity.Budget
-
+import androidx.lifecycle.LiveData // Import LiveData để quan sát dữ liệu
+import androidx.room.* // Import các annotation của Room (Dao, Insert, Update, Delete, Query)
+import com.example.spendwise.data.entity.Budget // Import entity Budget
 
 @Dao
 interface BudgetDao {
-
+    // Định nghĩa interface DAO, chứa các hàm thao tác với bảng Budget trong Room
 
     // Thêm ngân sách
-    // Nếu trùng category + month + year thì cập nhật
-    @Insert(
-        onConflict = OnConflictStrategy.REPLACE
-    )
-    suspend fun insert(
-        budget: Budget
-    )
-
+    // Nếu trùng category + month + year thì cập nhật (REPLACE)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(budget: Budget)
 
     // Sửa ngân sách
     @Update
-    suspend fun update(
-        budget: Budget
-    )
-
+    suspend fun update(budget: Budget)
 
     // Xóa ngân sách
     @Delete
-    suspend fun delete(
-        budget: Budget
-    )
-
+    suspend fun delete(budget: Budget)
 
     /*
         Lấy ngân sách của tháng đang chọn
-
-        Ví dụ:
-        tháng 6 năm 2026
-
-        chỉ trả:
-        - Ăn uống 6/2026
-        - Đi lại 6/2026
-
+        Ví dụ: tháng 6 năm 2026
+        chỉ trả về các ngân sách thuộc tháng 6/2026
         Không lấy tháng khác
      */
     @Query(
@@ -59,10 +37,8 @@ interface BudgetDao {
         ORDER BY id DESC
         """
     )
-    fun getByMonth(
-        month: Int,
-        year: Int
-    ): LiveData<List<Budget>>
+    fun getByMonth(month: Int, year: Int): LiveData<List<Budget>>
+    // Trả về LiveData danh sách ngân sách theo tháng/năm
 
     @Query(
         """
@@ -73,22 +49,14 @@ interface BudgetDao {
         ORDER BY id DESC
         """
     )
-    fun getByMonthSync(
-        month: Int,
-        year: Int
-    ): List<Budget>
-
-
+    fun getByMonthSync(month: Int, year: Int): List<Budget>
+    // Trả về danh sách ngân sách theo tháng/năm (dạng đồng bộ, không LiveData)
 
     /*
-        Kiểm tra danh mục đã có ngân sách
-        trong tháng đó chưa
-
-        Ví dụ:
-        Ăn uống - 6/2026
-
-        tồn tại -> trả về
-        chưa có -> null
+        Kiểm tra danh mục đã có ngân sách trong tháng đó chưa
+        Ví dụ: Ăn uống - 6/2026
+        Nếu tồn tại -> trả về Budget
+        Nếu chưa có -> null
      */
     @Query(
         """
@@ -100,16 +68,10 @@ interface BudgetDao {
         LIMIT 1
         """
     )
-    suspend fun getByCategoryAndMonth(
-        categoryId: Int,
-        month: Int,
-        year: Int
-    ): Budget?
-
-
+    suspend fun getByCategoryAndMonth(categoryId: Int, month: Int, year: Int): Budget?
 
     /*
-        Lấy số tiền giới hạn của danh mục
+        Lấy số tiền giới hạn của một danh mục trong tháng/năm
      */
     @Query(
         """
@@ -121,17 +83,10 @@ interface BudgetDao {
         LIMIT 1
         """
     )
-    suspend fun getLimitAmount(
-        categoryId: Int,
-        month: Int,
-        year: Int
-    ): Double?
-
-
+    suspend fun getLimitAmount(categoryId: Int, month: Int, year: Int): Double?
 
     /*
-        Lấy toàn bộ ngân sách
-        dùng khi thống kê
+        Lấy toàn bộ ngân sách (dùng khi thống kê)
      */
     @Query(
         """
@@ -142,11 +97,8 @@ interface BudgetDao {
     )
     fun getAll(): LiveData<List<Budget>>
 
-
-
     /*
-        Xóa toàn bộ ngân sách của 1 tháng
-        ví dụ reset tháng
+        Xóa toàn bộ ngân sách của 1 tháng (ví dụ reset tháng)
      */
     @Query(
         """
@@ -155,11 +107,9 @@ interface BudgetDao {
         AND year = :year
         """
     )
-    suspend fun deleteByMonth(
-        month: Int,
-        year: Int
-    )
+    suspend fun deleteByMonth(month: Int, year: Int)
 
+    // Lấy tổng hạn mức ngân sách của tháng/năm
     @Query("SELECT COALESCE(SUM(limitAmount), 0.0) FROM budgets WHERE month = :month AND year = :year")
     fun getTotalBudgetLimit(month: Int, year: Int): LiveData<Double>
 }
