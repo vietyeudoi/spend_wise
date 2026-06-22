@@ -117,6 +117,44 @@ interface TransactionDao {
         AND date <= :endOfDay
     """)
     fun getTodayExpense(startOfDay: Long, endOfDay: Long): LiveData<Double>
+
+    @Query("""
+    SELECT t.categoryId,
+           c.name AS categoryName,
+           SUM(t.amount) AS total
+    FROM transactions t
+    INNER JOIN categories c ON t.categoryId = c.id
+    WHERE t.type = 'expense'
+      AND strftime('%Y-%m-%d', t.date / 1000, 'unixepoch') = :date
+    GROUP BY t.categoryId
+    ORDER BY total DESC
+""")
+    fun getSpendingByDate(date: String): LiveData<List<CategoryTotal>>
+
+    @Query("""
+    SELECT t.categoryId,
+           c.name AS categoryName,
+           SUM(t.amount) AS total
+    FROM transactions t
+    INNER JOIN categories c ON t.categoryId = c.id
+    WHERE t.type = 'expense'
+      AND strftime('%Y', t.date / 1000, 'unixepoch') = :year
+    GROUP BY t.categoryId
+    ORDER BY total DESC
+""")
+    fun getSpendingByYear(year: String): LiveData<List<CategoryTotal>>
+
+    @Query("""
+    SELECT t.categoryId,
+           c.name AS categoryName,
+           SUM(t.amount) AS total
+    FROM transactions t
+    INNER JOIN categories c ON t.categoryId = c.id
+    WHERE t.type = 'expense'
+    GROUP BY t.categoryId
+    ORDER BY total DESC
+""")
+    fun getAllSpendingByCategory(): LiveData<List<CategoryTotal>>
 }
 
 // Data class nhỏ để nhận kết quả query tổng theo danh mục

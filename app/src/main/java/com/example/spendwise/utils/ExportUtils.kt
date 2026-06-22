@@ -1,6 +1,6 @@
 package com.example.spendwise.utils
 
-import android.content.Context
+import  android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import androidx.core.content.FileProvider
@@ -23,9 +23,35 @@ object ExportUtils {
     // ── Xây nội dung CSV chung cho cả 2 hàm dưới ──────────────────────────────
     private fun buildCsvContent(transactions: List<Transaction>): String {
         val header = "id,title,amount,type,categoryId,note,date\n"
+
+        val sdf = SimpleDateFormat(
+            "dd/MM/yyyy HH:mm",
+            Locale.getDefault()
+        )
+
         val rows = transactions.joinToString("\n") { t ->
-            "${t.id},\"${t.title.replace("\"", "'")}\",${t.amount},${t.type},${t.categoryId ?: ""},\"${t.note.replace("\"", "'")}\",${t.date}"
+
+            val formattedDate = sdf.format(Date(t.date))
+
+            val title = t.title
+                .replace("\"", "'")
+                .replace(",", " ")
+                .replace("\n", " ")
+
+            val note = t.note
+                .replace("\"", "'")
+                .replace(",", " ")
+                .replace("\n", " ")
+
+            "${t.id}," +
+                    "\"$title\"," +
+                    "${t.amount}," +
+                    "${t.type}," +
+                    "${t.categoryId ?: ""}," +
+                    "\"$note\"," +
+                    formattedDate
         }
+
         return header + rows
     }
 
@@ -95,39 +121,5 @@ object ExportUtils {
             false
         }
     }
-    fun exportToCsv(context: Context, transactions: List<Transaction>) {
-        if (transactions.isEmpty()) {
-            Toast.makeText(context, "Không có giao dịch để xuất!", Toast.LENGTH_SHORT).show()
-            return
-        }
-        try {
-            val file = File(context.cacheDir, "transactions.csv")
-            val writer = FileWriter(file)
-            writer.append("ID,Title,Amount,Type,CategoryId,Note,Date\n")
-            val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-            transactions.forEach { t ->
-                val dateStr = sdf.format(Date(t.date))
-                val title = t.title.replace(",", " ").replace("\n", " ")
-                val note = t.note.replace(",", " ").replace("\n", " ")
-                writer.append("${t.id},$title,${t.amount},${t.type},${t.categoryId ?: ""},$note,$dateStr\n")
-            }
-            writer.flush()
-            writer.close()
 
-            val uri = FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                file
-            )
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/csv"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            context.startActivity(Intent.createChooser(intent, "Xuất CSV"))
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Toast.makeText(context, "Lỗi xuất file: ${e.message}", Toast.LENGTH_SHORT).show()
-        }
-    }
 }

@@ -7,10 +7,10 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,17 +32,25 @@ import com.github.mikephil.charting.data.PieEntry
 import java.util.Locale
 
 val ChartColors = listOf(
-    Color(0xFF007AFF).hashCode(), Color(0xFF34C759).hashCode(), Color(0xFFFF9500).hashCode(),
-    Color(0xFFFF2D55).hashCode(), Color(0xAF5856D6).hashCode(), Color(0xFF4CD964).hashCode()
+    Color(0xFF007AFF).hashCode(),
+    Color(0xFF34C759).hashCode(),
+    Color(0xFFFF9500).hashCode(),
+    Color(0xFFFF2D55).hashCode(),
+    Color(0xAF5856D6).hashCode(),
+    Color(0xFF4CD964).hashCode()
 )
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsScreen(vm: TransactionViewModel = viewModel()) {
 
     val context = LocalContext.current
+
     val transactions by vm.getTransactions().observeAsState(emptyList())
-    val spending by vm.categorySpending().observeAsState(emptyList())
+    val spending by vm.getCategorySpending().observeAsState(emptyList())
     val totalSpending = spending.sumOf { it.total }
+
+    var showExportMenu by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = BackgroundGray,
@@ -59,149 +67,213 @@ fun StatsScreen(vm: TransactionViewModel = viewModel()) {
                     )
                 },
                 actions = {
-                    IconButton(onClick = { ExportUtils.exportToCsv(context, transactions) }) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Xuất CSV"
-                        )
+                    Box {
+                        IconButton(onClick = { showExportMenu = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "Xuất dữ liệu"
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = showExportMenu,
+                            onDismissRequest = { showExportMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Chia sẻ") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Share, null)
+                                },
+                                onClick = {
+                                    ExportUtils.shareCsv(context, transactions)
+                                    showExportMenu = false
+                                }
+                            )
+
+                            DropdownMenuItem(
+                                text = { Text("Lưu về máy") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Download, null)
+                                },
+                                onClick = {
+                                    ExportUtils.saveToDevice(context, transactions)
+                                    showExportMenu = false
+                                }
+                            )
+                        }
                     }
                 }
             )
         }
     ) { padding ->
 
-        if (spending.isEmpty()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
 
-            Box(
+            Row(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                Text("Chưa có dữ liệu tháng này", color = ContentGray)
+
+                FilterChip(
+                    selected = vm.filterMode == TransactionViewModel.FilterMode.DAY,
+                    onClick = {
+                        vm.changeFilterMode(TransactionViewModel.FilterMode.DAY)
+                    },
+                    label = { Text("Ngày") }
+                )
+
+                FilterChip(
+                    selected = vm.filterMode == TransactionViewModel.FilterMode.MONTH,
+                    onClick = {
+                        vm.changeFilterMode(TransactionViewModel.FilterMode.MONTH)
+                    },
+                    label = { Text("Tháng") }
+                )
+
+                FilterChip(
+                    selected = vm.filterMode == TransactionViewModel.FilterMode.YEAR,
+                    onClick = {
+                        vm.changeFilterMode(TransactionViewModel.FilterMode.YEAR)
+                    },
+                    label = { Text("Năm") }
+                )
+
+                FilterChip(
+                    selected = vm.filterMode == TransactionViewModel.FilterMode.ALL,
+                    onClick = {
+                        vm.changeFilterMode(TransactionViewModel.FilterMode.ALL)
+                    },
+                    label = { Text("Tất cả") }
+                )
             }
 
-        } else {
-
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-
-                item {
-
-                    Card(
-                        shape = RoundedCornerShape(24.dp)
-                    ) {
-
-                        Column(Modifier.padding(16.dp)) {
-
-                            Text(
-                                "Cơ cấu chi tiêu",
-                                fontWeight = FontWeight.Bold
-                            )
-
-                            Spacer(Modifier.height(12.dp))
-
-                            AndroidView(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(240.dp),
-                                factory = { context ->
-                                    PieChart(context).apply {
-                                        description.isEnabled = false
-                                        isDrawHoleEnabled = true
-                                        holeRadius = 65f
-                                        setHoleColor(android.graphics.Color.TRANSPARENT)
-                                        legend.isEnabled = false
-                                        setDrawEntryLabels(false)
-                                        animateY(800, Easing.EaseInOutQuad)
-                                    }
-                                },
-                                update = { chart ->
-
-                                    val entries = spending.map {
-                                        PieEntry(it.total.toFloat(), it.categoryName)
-                                    }
-
-                                    val dataSet = PieDataSet(entries, "").apply {
-                                        colors = ChartColors
-                                        sliceSpace = 3f
-                                        setDrawValues(false)
-                                    }
-
-                                    chart.data = PieData(dataSet)
-
-                                    chart.centerText =
-                                        "Tổng chi\n${formatMoney(totalSpending)}"
-
-                                    chart.setCenterTextSize(14f)
-
-                                    chart.invalidate()
-                                }
-                            )
-                        }
-                    }
+            if (spending.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Không có dữ liệu", color = ContentGray)
                 }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
 
-                itemsIndexed(spending) { idx, item ->
+                    item {
+                        Card(shape = RoundedCornerShape(24.dp)) {
+                            Column(Modifier.padding(16.dp)) {
 
-                    val color = Color(ChartColors[idx % ChartColors.size])
-
-                    val pct =
-                        if (totalSpending > 0)
-                            (item.total / totalSpending) * 100
-                        else 0.0
-
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = SurfaceWhite
-                    ) {
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-
-                                Box(
-                                    modifier = Modifier
-                                        .size(12.dp)
-                                        .background(color, CircleShape)
+                                Text(
+                                    "Cơ cấu chi tiêu",
+                                    fontWeight = FontWeight.Bold
                                 )
 
-                                Spacer(Modifier.width(12.dp))
+                                Spacer(Modifier.height(12.dp))
 
-                                Column {
+                                AndroidView(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(240.dp),
+                                    factory = { ctx ->
+                                        PieChart(ctx).apply {
+                                            description.isEnabled = false
+                                            isDrawHoleEnabled = true
+                                            holeRadius = 65f
+                                            setHoleColor(android.graphics.Color.TRANSPARENT)
+                                            legend.isEnabled = false
+                                            setDrawEntryLabels(false)
+                                            animateY(800, Easing.EaseInOutQuad)
+                                        }
+                                    },
+                                    update = { chart ->
+                                        val entries = spending.map {
+                                            PieEntry(
+                                                it.total.toFloat(),
+                                                it.categoryName
+                                            )
+                                        }
 
-                                    Text(
-                                        item.categoryName,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
+                                        val dataSet = PieDataSet(entries, "").apply {
+                                            colors = ChartColors
+                                            sliceSpace = 3f
+                                            setDrawValues(false)
+                                        }
 
-                                    Text(
-                                        String.format(
-                                            Locale.getDefault(),
-                                            "Chiếm %.1f%%",
-                                            pct
-                                        ),
-                                        color = ContentGray,
-                                        fontSize = 12.sp
-                                    )
-                                }
+                                        chart.data = PieData(dataSet)
+                                        chart.centerText =
+                                            "Tổng chi\n${formatMoney(totalSpending)}"
+                                        chart.setCenterTextSize(14f)
+                                        chart.invalidate()
+                                    }
+                                )
                             }
+                        }
+                    }
 
-                            Text(
-                                formatMoney(item.total),
-                                fontWeight = FontWeight.Bold
-                            )
+                    itemsIndexed(spending) { idx, item ->
+
+                        val color = Color(
+                            ChartColors[idx % ChartColors.size]
+                        )
+
+                        val pct =
+                            if (totalSpending > 0)
+                                (item.total / totalSpending) * 100
+                            else 0.0
+
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = SurfaceWhite
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+
+                                    Box(
+                                        modifier = Modifier
+                                            .size(12.dp)
+                                            .background(color, CircleShape)
+                                    )
+
+                                    Spacer(Modifier.width(12.dp))
+
+                                    Column {
+                                        Text(
+                                            item.categoryName,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+
+                                        Text(
+                                            String.format(
+                                                Locale.getDefault(),
+                                                "Chiếm %.1f%%",
+                                                pct
+                                            ),
+                                            color = ContentGray,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                }
+
+                                Text(
+                                    formatMoney(item.total),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }

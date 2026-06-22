@@ -142,11 +142,26 @@ class TransactionViewModel(application: Application) :
             selectedYear.toString()
         )
 
-    fun getCategorySpending(): LiveData<List<CategoryTotal>> =
-        transactionRepo.getSpendingByCategory(
-            selectedMonth,
-            selectedYear.toString()
-        )
+    fun getCategorySpending(): LiveData<List<CategoryTotal>> {
+        return when (filterMode) {
+            FilterMode.DAY ->
+                transactionRepo.getSpendingByDate(selectedDate)
+
+            FilterMode.MONTH ->
+                transactionRepo.getSpendingByCategory(
+                    selectedMonth,
+                    selectedYear.toString()
+                )
+
+            FilterMode.YEAR ->
+                transactionRepo.getSpendingByYear(
+                    selectedYear.toString()
+                )
+
+            FilterMode.ALL ->
+                transactionRepo.getAllSpendingByCategory()
+        }
+    }
 
     fun categorySpending(month: Int = selectedMonth, year: Int = selectedYear): LiveData<List<CategoryTotal>> {
         return transactionRepo.getSpendingByCategory(month, year.toString())

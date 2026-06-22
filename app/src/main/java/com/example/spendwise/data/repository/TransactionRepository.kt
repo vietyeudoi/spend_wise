@@ -35,6 +35,19 @@ class TransactionRepository(application: Application) {
     fun getSpendingByCategory(month: Int, year: String): LiveData<List<CategoryTotal>> =
         dao.getSpendingByCategory(month, year)
 
+    fun getSpendingByDate(
+        date: String
+    ): LiveData<List<CategoryTotal>> =
+        dao.getSpendingByDate(date)
+
+    fun getSpendingByYear(
+        year: String
+    ): LiveData<List<CategoryTotal>> =
+        dao.getSpendingByYear(year)
+
+    fun getAllSpendingByCategory(): LiveData<List<CategoryTotal>> =
+        dao.getAllSpendingByCategory()
+
     fun search(keyword: String): LiveData<List<Transaction>> = dao.search(keyword)
 
     // ── Ghi dữ liệu (phải chạy trên background thread) ───────────────────────

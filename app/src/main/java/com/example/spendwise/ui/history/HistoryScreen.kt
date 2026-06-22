@@ -130,42 +130,6 @@ fun HistoryScreen(
                         fontWeight = FontWeight.Bold
                     )
                 },
-                actions = {
-                    IconButton(onClick = { ExportUtils.exportToCsv(context, filteredTransactions) }) {
-
-
-// Thêm state trong Composable
-                        var showExportMenu by remember { mutableStateOf(false) }
-
-// Thay icon Share cũ bằng:
-                        Box {
-                            IconButton(onClick = { showExportMenu = true }) {
-                                Icon(imageVector = Icons.Default.Share, contentDescription = "Xuất dữ liệu")
-                            }
-                            DropdownMenu(
-                                expanded = showExportMenu,
-                                onDismissRequest = { showExportMenu = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Chia sẻ") },
-                                    leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) },
-                                    onClick = {
-                                        ExportUtils.shareCsv(context, filteredTransactions)
-                                        showExportMenu = false
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Lưu về máy") },
-                                    leadingIcon = { Icon(Icons.Default.Download, contentDescription = null) },
-                                    onClick = {
-                                        ExportUtils.saveToDevice(context, filteredTransactions)
-                                        showExportMenu = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
             )
         }
     ) { padding ->
