@@ -130,11 +130,11 @@ fun HomeScreen(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                //luồng khi nhấn nút thêm
+                //luồng khi nhấn nút thêm------------------------------------------------------
                 onClick = onNavigateToAdd,
                 containerColor = BrandBlue,
                 contentColor = SurfaceWhite,
-                shape = CircleShape,
+                shape = CircleShape,//botron
                 elevation = FloatingActionButtonDefaults.elevation(8.dp),
                 modifier = Modifier.padding(bottom = 16.dp)
             ) {

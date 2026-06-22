@@ -1,5 +1,5 @@
 package com.example.spendwise.navigation
-
+//chịu trách nhiệm điều hướng
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -59,8 +59,10 @@ fun SpendWiseNavHost(
         modifier         = modifier
     ) {
         composable(Screen.Home.route) {
-            // nút thêm, mở addtransaction
-            HomeScreen(onNavigateToAdd = {
+            // nút thêm, truyền xuống home
+            HomeScreen(
+                onNavigateToAdd = {
+                    //khi click thì dòng này thực hiện
                 navController.navigate(Screen.AddTransaction.route)
             })
         }
