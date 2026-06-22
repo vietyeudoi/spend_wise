@@ -48,6 +48,8 @@ fun HistoryScreen(
     var mode by remember {
         mutableStateOf(TransactionViewModel.FilterMode.MONTH)
     }
+
+    //tìm kiếm gd
     var searchQuery by remember { mutableStateOf("") }
 
     LaunchedEffect(mode) {
@@ -68,6 +70,7 @@ fun HistoryScreen(
         }
     }
 
+    //Hiển thi danh sách gd
     val transactions by vm.getTransactions()
         .observeAsState(emptyList())
 
@@ -114,6 +117,7 @@ fun HistoryScreen(
         else filteredTransactions.filter { it.type == "expense" }.sumOf { it.amount }
     }
 
+    //GD THEO NGÀY_________________--
     val grouped = filteredTransactions.groupBy {
         SimpleDateFormat(
             "dd/MM/yyyy",
@@ -213,7 +217,7 @@ fun HistoryScreen(
                     )
                 }
             }
-
+//TÌM KIẾM __________________________________________
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -239,7 +243,7 @@ fun HistoryScreen(
                 horizontalArrangement =
                     Arrangement.spacedBy(8.dp)
             ) {
-
+//Lọc__________________
                 FilterChip(
                     selected =
                         mode ==
@@ -420,7 +424,7 @@ fun HistoryScreen(
                             val itemSpent = spending.find { it.categoryId == item.categoryId }?.total ?: 0.0
                             val isOver = if (itemBudget != null) isOverBudget(itemSpent, itemBudget.limitAmount) else false
                             val catName = categories.find { it.id == item.categoryId }?.name ?: ""
-//Xem chi tiết
+//Xem chi tiết----------------------------------------------
                             TransactionItem(
                                 t = item,
                                 isCategoryOverBudget = isOver,
