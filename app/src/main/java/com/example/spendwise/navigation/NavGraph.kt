@@ -54,10 +54,12 @@ fun SpendWiseNavHost(
 ) {
     NavHost(
         navController    = navController,
+        //NavHost khởi động khi mở app
         startDestination = Screen.Home.route,
         modifier         = modifier
     ) {
         composable(Screen.Home.route) {
+            // nút thêm, mở addtransaction
             HomeScreen(onNavigateToAdd = {
                 navController.navigate(Screen.AddTransaction.route)
             })
@@ -79,6 +81,7 @@ fun SpendWiseNavHost(
         ) { backStackEntry ->
             val id = backStackEntry.arguments?.getInt(Screen.EditTransaction.ARG_ID) ?: -1
             AddTransactionScreen(
+                //luồng nút chỉnh sửa
                 transactionId  = id,
                 onNavigateBack = { navController.popBackStack() }
             )
@@ -120,6 +123,7 @@ fun SpendWiseNavHost(
                 onEdit = {
                     navController.navigate(
                         Screen.EditTransaction.createRoute(id)
+                        //mở chỉnh sửa
                     )
                 }
             )

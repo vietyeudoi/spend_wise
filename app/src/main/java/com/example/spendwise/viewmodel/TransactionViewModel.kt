@@ -69,6 +69,7 @@ class TransactionViewModel(application: Application) :
     }
 
     // ================= SET FILTER =================
+    //Lọc gd
     fun changeFilterMode(mode: FilterMode) {
         filterMode = mode
     }
@@ -107,6 +108,7 @@ class TransactionViewModel(application: Application) :
         categoryRepo.getAll()
 
     // ================= QUERY =================
+    //Home sẽ gọi tới đây để xem ds gd
     fun getTransactions(): LiveData<List<Transaction>> {
         return when (filterMode) {
             FilterMode.DAY -> transactionRepo.getByDate(selectedDate)
@@ -151,12 +153,16 @@ class TransactionViewModel(application: Application) :
     }
 
     // ================= CRUD =================
+    //Thêm gd
     fun insert(transaction: Transaction) = transactionRepo.insert(transaction)
+    //lưu thay đổi
     fun update(transaction: Transaction) = transactionRepo.update(transaction)
+    //xóa gd
     fun delete(transaction: Transaction) = transactionRepo.delete(transaction)
 
     fun search(keyword: String) = transactionRepo.search(keyword)
 
+    //edit lấy dữ liệu cũ từ đây
     fun getById(id: Int): LiveData<Transaction?> =
         transactionRepo.getById(id)
 

@@ -61,6 +61,7 @@ fun TransactionDetailScreen(
                 },
                 actions = {
                     tx?.let { currentTx ->
+                        //----------------XÓA------------------
                         IconButton(onClick = {
                             vm.delete(currentTx)
                             onBack()

@@ -420,7 +420,7 @@ fun HistoryScreen(
                             val itemSpent = spending.find { it.categoryId == item.categoryId }?.total ?: 0.0
                             val isOver = if (itemBudget != null) isOverBudget(itemSpent, itemBudget.limitAmount) else false
                             val catName = categories.find { it.id == item.categoryId }?.name ?: ""
-
+//Xem chi tiết
                             TransactionItem(
                                 t = item,
                                 isCategoryOverBudget = isOver,

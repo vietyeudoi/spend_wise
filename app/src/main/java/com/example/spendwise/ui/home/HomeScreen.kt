@@ -49,13 +49,18 @@ val TextDark = Color(0xFF1C1C1E)
 @Composable
 fun HomeScreen(
     onNavigateToAdd: () -> Unit,
-    vm: TransactionViewModel = viewModel(),
+    vm: TransactionViewModel = viewModel(),//lấy dự liệu từ vm
     budgetVm: BudgetViewModel = viewModel()
 ) {
     val context = LocalContext.current
+
     val totalIncome by vm.getIncome().observeAsState(0.0)
+    //tổng thu
     val totalExpense by vm.getExpense().observeAsState(0.0)
+    //tổng chi
+    //cho xem danh sách gd
     val transactions by vm.getTransactions().observeAsState(initial = emptyList())
+    //dữ liệu gd
 
     val budgets by budgetVm.getBudgetsForMonth(vm.selectedMonth, vm.selectedYear).observeAsState(emptyList())
     val spending by vm.categorySpending().observeAsState(emptyList())
@@ -125,6 +130,7 @@ fun HomeScreen(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
+                //luồng khi nhấn nút thêm
                 onClick = onNavigateToAdd,
                 containerColor = BrandBlue,
                 contentColor = SurfaceWhite,
@@ -185,6 +191,7 @@ fun HomeScreen(
                     stickyHeader {
                         DateHeaderRow(dateHeader)
                     }
+                    //gd được hiển thị
                     items(list) { transaction ->
                         ModernTransactionRowItem(transaction)
                     }
@@ -275,6 +282,8 @@ fun DashboardCard(
     }
 }
 
+
+//Luồng lọc gd
 @Composable
 fun FilterTimeTabs(vm: TransactionViewModel) {
     Row(
@@ -325,6 +334,7 @@ fun DateHeaderRow(dateString: String) {
     }
 }
 
+//Trong hàm này k mở được chi tiểt
 @Composable
 fun ModernTransactionRowItem(transaction: Transaction) {
     Surface(

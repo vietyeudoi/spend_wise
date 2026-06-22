@@ -21,11 +21,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             SpendWiseTheme {
-                val navController = rememberNavController()
+                val navController = rememberNavController()//tạo bộ điều hướng
                 val currentEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = currentEntry?.destination?.route
 
-                // Các tab hiển thị BottomBar
+                // Các màn hình chính
                 val bottomNavItems = listOf(
                     BottomNavItem("Tổng quan", Screen.Home.route,    Icons.Default.Home),
                     BottomNavItem("Lịch sử",   Screen.History.createRoute(-1), Icons.Default.List),
@@ -40,7 +40,7 @@ class MainActivity : ComponentActivity() {
                     Screen.Stats.route,
                     Screen.Budget.route
                 )
-
+                // Tạo khung giao diện
                 Scaffold(
                     bottomBar = {
                         if (showBottomBar) {
@@ -68,6 +68,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 ) { innerPadding ->
+                    //quản lý chuyển màn hình
                     SpendWiseNavHost(
                         navController = navController,
                         modifier      = Modifier.padding(innerPadding)

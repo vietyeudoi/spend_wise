@@ -11,8 +11,11 @@ import com.example.spendwise.data.entity.Transaction
 
 @Dao
 interface TransactionDao {
-
+    //repos gọi
+    //Thêm giao dịch
     @Insert(onConflict = OnConflictStrategy.REPLACE)
+    //Insert Là annotation của Room dùng để thêm dữ liệu vào bảng.
+    //REPLACE: Nếu khóa chính bị trùng thì dữ liệu cũ sẽ bị ghi đè.
     fun insert(transaction: Transaction)
 
     @Update
@@ -22,6 +25,7 @@ interface TransactionDao {
     fun delete(transaction: Transaction)
 
     // Tất cả giao dịch, mới nhất trước
+    //repos gọi
     @Query("SELECT * FROM transactions ORDER BY date DESC")
     fun getAll(): LiveData<List<Transaction>>
 
@@ -102,6 +106,7 @@ interface TransactionDao {
        OR c.name  LIKE '%' || :keyword || '%'
     ORDER BY t.date DESC
 """)
+    //repos gọi
     fun search(keyword: String): LiveData<List<Transaction>>
 
     @Query("""

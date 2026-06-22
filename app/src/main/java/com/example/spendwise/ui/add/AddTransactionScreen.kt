@@ -17,12 +17,15 @@ import com.example.spendwise.viewmodel.TransactionViewModel
 import com.example.spendwise.utils.ThousandsSeparatorTransformation
 
 @OptIn(ExperimentalMaterial3Api::class)
+//thêm mới
 @Composable
+//mở thêm
 fun AddTransactionScreen(
     transactionId: Int = -1,
     onNavigateBack: () -> Unit,
     vm: TransactionViewModel = viewModel()
 ) {
+    //chuyển sang chế độ sửa
     val isEditMode = transactionId != -1
     val categories by vm.allCategories.observeAsState(emptyList())
 
@@ -36,6 +39,7 @@ fun AddTransactionScreen(
     }
 
     // ── State ─────────────────────────────────────────────────────────────────
+    //edit: đỗ dữ liệu cũ lên đây
     var title       by remember { mutableStateOf("") }
     var amount      by remember { mutableStateOf("") }
     var note        by remember { mutableStateOf("") }
@@ -72,6 +76,7 @@ fun AddTransactionScreen(
             TopAppBar(
                 title = { Text(if (isEditMode) "Sửa giao dịch" else "Thêm giao dịch") },
                 navigationIcon = {
+                    //nút thêm, sửa
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Quay lại")
                     }
@@ -91,8 +96,10 @@ fun AddTransactionScreen(
             OutlinedTextField(
                 value         = title,
                 onValueChange = { title = it },
+                //it đại diện cho chuỗi
                 label         = { Text("Tên giao dịch") },
                 modifier      = Modifier.fillMaxWidth(),
+                //dl nằm trên 1 dòng duy nhất, enter là done
                 singleLine    = true
             )
 
@@ -102,6 +109,7 @@ fun AddTransactionScreen(
                 onValueChange = { amount = it },
                 label         = { Text("Số tiền (đ)") },
                 suffix = { Text("đ") },
+                //tự động thêm ,.
                 visualTransformation = ThousandsSeparatorTransformation(),
                 modifier      = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
