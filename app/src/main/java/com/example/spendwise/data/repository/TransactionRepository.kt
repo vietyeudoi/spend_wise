@@ -26,6 +26,12 @@ class TransactionRepository(application: Application) {
 
     fun getRecent(): LiveData<List<Transaction>> = dao.getRecent()
 
+    fun getByDate(date: String): LiveData<List<Transaction>> =
+        dao.getByDate(date)
+
+    fun getByYear(year: String): LiveData<List<Transaction>> =
+        dao.getByYear(year)
+
     fun getByMonth(month: Int, year: String): LiveData<List<Transaction>> =
         dao.getByMonth(month, year)
 
@@ -69,11 +75,6 @@ class TransactionRepository(application: Application) {
         return dao.getById(id)
     }
 
-    fun getByDate(date: String): LiveData<List<Transaction>> =
-        dao.getByDate(date)
-
-    fun getByYear(year: String): LiveData<List<Transaction>> =
-        dao.getByYear(year)
 
     fun getTodayExpense(startOfDay: Long, endOfDay: Long): LiveData<Double> =
         dao.getTodayExpense(startOfDay, endOfDay)

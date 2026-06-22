@@ -91,17 +91,29 @@ fun HistoryScreen(
 
     val activeCategory = categories.find { it.id == activeCategoryId }
 
-    val filteredTransactions = remember(transactions, activeCategoryId, searchQuery, categories) {
+    //LỌC____________________-
+    val filteredTransactions = remember(
+        transactions,
+        activeCategoryId,
+        searchQuery,
+        categories
+    ) {
+
         val byCategory = if (activeCategoryId == -1) transactions
         else transactions.filter { it.categoryId == activeCategoryId }
 
         if (searchQuery.isBlank()) {
             byCategory
         } else {
+
+            //TÌM KIẾM DANH MỤC
             val q = searchQuery.trim().lowercase()
+
             byCategory.filter { t ->
-                val catName = categories.find { it.id == t.categoryId }?.name ?: ""
-                t.title.lowercase().contains(q) ||
+
+                val catName =
+                    categories.find { it.id == t.categoryId }?.name ?: ""
+                        t.title.lowercase().contains(q) ||
                         t.note.lowercase().contains(q) ||
                         catName.lowercase().contains(q)
             }
@@ -207,7 +219,7 @@ fun HistoryScreen(
                 horizontalArrangement =
                     Arrangement.spacedBy(8.dp)
             ) {
-//Lọc__________________
+//CHỌN CÁC BỘ Lọc__________________
                 FilterChip(
                     selected =
                         mode ==

@@ -62,7 +62,13 @@ fun HomeScreen(
     val transactions by vm.getTransactions().observeAsState(initial = emptyList())
     //dữ liệu gd
 
-    val budgets by budgetVm.getBudgetsForMonth(vm.selectedMonth, vm.selectedYear).observeAsState(emptyList())
+    val budgets by budgetVm
+        .getBudgetsForMonth(
+            vm.selectedMonth,
+            vm.selectedYear
+        )
+        .observeAsState(emptyList())
+
     val spending by vm.categorySpending().observeAsState(emptyList())
 
     val hasOverBudgetCategory = budgets.any { budget ->
@@ -70,7 +76,13 @@ fun HomeScreen(
         isOverBudget(spent, budget.limitAmount)
     }
 
-    val totalBudgetLimit by budgetVm.totalBudgetLimit.observeAsState(0.0)
+    val totalBudgetLimit by budgetVm
+        .getTotalBudgetLimit(
+            vm.selectedMonth,
+            vm.selectedYear
+        )
+        .observeAsState(0.0)
+
     val remainingBudget = totalBudgetLimit - totalExpense
 
     Scaffold(
@@ -125,6 +137,8 @@ fun HomeScreen(
                         }
                     }
                 )
+
+                //Người dùng lọc--------------------------------------------------
                 FilterTimeTabs(vm)
             }
         },
@@ -305,6 +319,7 @@ fun FilterTimeTabs(vm: TransactionViewModel) {
                 color = if (isSelected) BrandBlue else BackgroundGray,
                 modifier = Modifier
                     .weight(1f)
+                    //người dùng bấm ở đây, sau đó goi vm
                     .clickable { vm.changeFilterMode(mode) }
             ) {
                 Text(
